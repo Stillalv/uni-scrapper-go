@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Dark Mode (Default Apple Dark) */
+  --bg-main: #141416;
+  --text-main: #ededef;
+  --text-sub: rgba(235, 235, 245, 0.65);
+  --text-muted-custom: rgba(235, 235, 245, 0.4);
+  --panel-bg: rgba(30, 30, 35, 0.85);
+  --sidebar-bg: rgba(22, 22, 26, 0.95);
+  --card-bg: rgba(38, 38, 44, 0.65);
+  --card-hover: rgba(48, 48, 56, 0.8);
+  --input-bg: rgba(18, 18, 22, 0.6);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --icon-monochrome: rgba(235, 235, 245, 0.7);
+  --shadow-custom: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --btn-secondary-bg: rgba(255, 255, 255, 0.08);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.15);
+}
+
+.light-theme {
+  /* Apple macOS Light Mode (San Francisco Minimalist Light) */
+  --bg-main: #f5f5f7;
+  --text-main: #1d1d1f;
+  --text-sub: #515154;
+  --text-muted-custom: #86868b;
+  --panel-bg: rgba(255, 255, 255, 0.85);
+  --sidebar-bg: rgba(242, 242, 247, 0.95);
+  --card-bg: #ffffff;
+  --card-hover: #ffffff;
+  --input-bg: rgba(240, 240, 245, 0.9);
+  --border-color: rgba(0, 0, 0, 0.08);
+  --icon-monochrome: #515154;
+  --shadow-custom: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+  --btn-secondary-bg: rgba(0, 0, 0, 0.05);
+  --btn-secondary-hover: rgba(0, 0, 0, 0.1);
+}
+
+.light-theme body, .light-theme {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    @apply font-sans antialiased h-screen overflow-hidden transition-colors duration-300;
+  }
+}
+
+/* Custom macOS Glassmorphism & Minimalist Aesthetics */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.glass-sidebar {
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-right: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+
+.glass-card {
+  background: var(--card-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-custom);
+  color: var(--text-main);
+}
+
+.glass-input {
+  background: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+}
+.glass-input:focus {
+  border-color: #0071e3;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+  outline: none;
+}
+
+/* Light mode text contrast overrides for tailwind utility classes */
+.light-theme .text-white {
+  color: #1d1d1f !important;
+}
+.light-theme .text-white\/90 {
+  color: #1d1d1f !important;
+}
+.light-theme .text-white\/80 {
+  color: #333336 !important;
+}
+.light-theme .text-white\/70 {
+  color: #515154 !important;
+}
+.light-theme .text-white\/60 {
+  color: #6e6e73 !important;
+}
+.light-theme .text-white\/50 {
+  color: #6e6e73 !important;
+}
+.light-theme .text-white\/40 {
+  color: #86868b !important;
+}
+.light-theme .text-white\/30 {
+  color: #a1a1a6 !important;
+}
+.light-theme .text-white\/20 {
+  color: #c7c7cc !important;
+}
+.light-theme .text-white\/10 {
+  color: #e5e5ea !important;
+}
+
+/* Background overrides in light theme */
+.light-theme .bg-white\/5 {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+.light-theme .bg-white\/10 {
+  background-color: rgba(0, 0, 0, 0.07) !important;
+}
+.light-theme .bg-white\/15 {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+.light-theme .bg-white\/20 {
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+.light-theme .bg-white\/\[0\.02\] {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+.light-theme .border-white\/5,
+.light-theme .border-white\/6,
+.light-theme .border-white\/10 {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Minimalist Monochrome Icon Styles (No multi-colored rainbow icons) */
+.light-theme .text-yellow-400,
+.light-theme .text-amber-400,
+.light-theme .text-emerald-400,
+.light-theme .text-purple-400,
+.light-theme .text-indigo-400 {
+  color: #515154 !important;
+}
+
+.light-theme .bg-yellow-400\/10,
+.light-theme .bg-emerald-500\/10,
+.light-theme .bg-blue-500\/10 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(140, 140, 145, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(140, 140, 145, 0.5);
+}
+
+/* macOS Traffic Light Buttons */
+.traffic-btn {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.traffic-close { background-color: #ff5f56; border: 1px solid #e0443e; }
+.traffic-minimize { background-color: #ffbd2e; border: 1px solid #dea123; }
+.traffic-maximize { background-color: #27c93f; border: 1px solid #1aab29; }
+
+/* Pulse animation for active workers */
+@keyframes workerPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.65; transform: scale(0.97); }
+}
+
+.worker-active {
+  animation: workerPulse 1.5s infinite ease-in-out;
+}
