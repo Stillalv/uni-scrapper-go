@@ -1,5 +1,6 @@
 import React from 'react';
-import { Play, Square, Search, Cpu, FileImage, Layers, CheckCircle } from 'lucide-react';
+import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle } from '@mynaui/icons-react';
+import AppleSelect from './AppleSelect';
 
 export default function ComicDetails({
   comicUrl,
@@ -28,27 +29,25 @@ export default function ComicDetails({
   ];
 
   return (
-    <div className="glass-card rounded-xl p-4 space-y-4 shadow-lg border border-black/10 dark:border-white/10 select-none">
+    <div className="glass-card rounded-2xl p-5 space-y-5 shadow-lg border border-[var(--border-color)] select-none">
       {/* Top Section: URL Input & Fetch Button */}
-      <div className="space-y-1.5">
-        <label className="text-xs font-semibold flex items-center justify-between">
-          <span>Webtoon URL or Title ID:</span>
-          <span className="text-[11px] opacity-50 font-normal">e.g. 9523 or https://www.webtoons.com/...</span>
+      <div className="space-y-2">
+        <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center justify-between">
+          <span>Webtoon URL or Title ID</span>
+          <span className="text-[10px] opacity-40 font-normal normal-case tracking-normal">e.g. 9523 or https://www.webtoons.com/...</span>
         </label>
         <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              value={comicUrl}
-              onChange={(e) => setComicUrl(e.target.value)}
-              placeholder="Enter Webtoon URL or Title ID..."
-              className="w-full pl-3 pr-3 py-2 text-xs rounded-lg glass-input font-mono"
-            />
-          </div>
+          <input
+            type="text"
+            value={comicUrl}
+            onChange={(e) => setComicUrl(e.target.value)}
+            placeholder="Enter Webtoon URL or Title ID..."
+            className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono min-w-0"
+          />
           <button
             onClick={onCheckInfo}
             disabled={checkingInfo || isDownloading || !comicUrl}
-            className="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 active:scale-95 shrink-0"
+            className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 active:scale-[0.98] shrink-0"
           >
             <Search className={`w-3.5 h-3.5 ${checkingInfo ? 'animate-spin' : ''}`} />
             {checkingInfo ? 'Checking...' : 'Fetch Info'}
@@ -58,37 +57,39 @@ export default function ComicDetails({
 
       {/* Metadata Display */}
       {webtoonInfo && (
-        <div className="p-3 rounded-lg bg-black/[0.02] dark:bg-white/[0.03] border border-black/10 dark:border-white/10 flex items-center justify-between">
-          <div className="space-y-1">
-            <div className="text-sm font-bold flex items-center gap-2">
-              <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              {webtoonInfo.Title}
+        <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-[var(--border-color)] flex items-center justify-between gap-3">
+          <div className="space-y-1 min-w-0">
+            <div className="text-sm font-semibold flex items-center gap-2 tracking-tight">
+              <LayersTwo className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+              <span className="truncate">{webtoonInfo.Title}</span>
             </div>
-            <div className="text-xs opacity-70 flex items-center gap-3">
-              <span>Language: <strong className="uppercase">{webtoonInfo.Lang}</strong></span>
-              <span>Genre: <strong className="capitalize">{webtoonInfo.Genre}</strong></span>
+            <div className="text-xs opacity-60 flex items-center gap-2.5 flex-wrap">
+              <span>Language: <strong className="uppercase font-semibold">{webtoonInfo.Lang}</strong></span>
+              <span className="opacity-30">•</span>
+              <span>Genre: <strong className="capitalize font-semibold">{webtoonInfo.Genre}</strong></span>
+              <span className="opacity-30">•</span>
               <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{webtoonInfo.TotalEpisodes} Chapters</strong> ({webtoonInfo.EpisodeRange})</span>
             </div>
           </div>
-          <span className="text-xs px-2.5 py-1 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-300 font-semibold border border-blue-500/20 flex items-center gap-1">
+          <span className="text-[9px] px-2 py-1 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider border border-blue-500/20 flex items-center gap-1 shrink-0">
             <CheckCircle className="w-3 h-3" /> Validated
           </span>
         </div>
       )}
 
       {/* Grid Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Format Pills */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold flex items-center gap-1">
-            <FileImage className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Image Format:
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
+            <ImageRectangle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Image Format
           </label>
-          <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-lg border border-black/10 dark:border-white/10">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
             {formats.map((fmt) => (
               <button
                 key={fmt}
                 onClick={() => setSelectedFormat(fmt)}
-                className={`flex-1 py-1 text-xs rounded-md font-medium transition-all ${
+                className={`flex-1 h-7 px-1 flex items-center justify-center text-xs rounded-md font-semibold transition-all ${
                   selectedFormat === fmt
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'opacity-60 hover:opacity-100'
@@ -101,55 +102,49 @@ export default function ComicDetails({
         </div>
 
         {/* Worker Performance */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold flex items-center gap-1">
-            <Cpu className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Worker Profile:
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
+            <Microchip className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Worker Profile
           </label>
-          <select
+          <AppleSelect
             value={selectedWorkers}
-            onChange={(e) => setSelectedWorkers(Number(e.target.value))}
-            className="w-full py-1.5 px-3 text-xs rounded-lg glass-input font-medium cursor-pointer"
-          >
-            {workerOptions.map((opt) => (
-              <option key={opt.value} value={opt.value} className="bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white">
-                {opt.label}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setSelectedWorkers(Number(v))}
+            options={workerOptions}
+          />
         </div>
 
         {/* Chapter Selection Range */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold flex items-center justify-between">
-            <span>Chapter Range:</span>
-            <span className="text-[10px] opacity-50">e.g. 'all', '1-10', '1,3'</span>
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center justify-between">
+            <span>Chapter Range</span>
+            <span className="text-[9px] opacity-40 normal-case tracking-normal">all, 1-10, 20-</span>
           </label>
           <input
             type="text"
             value={chapterRange}
             onChange={(e) => setChapterRange(e.target.value)}
-            placeholder="all, 1-10, 20-"
-            className="w-full px-3 py-1.5 text-xs rounded-lg glass-input font-mono"
+            placeholder="e.g. all, 1-10, 20-"
+            className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
           />
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="pt-2 flex items-center justify-end gap-2 border-t border-black/5 dark:border-white/5">
+      <div className="pt-4 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
         {isDownloading ? (
           <button
             onClick={onCancelDownload}
-            className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs border border-rose-500/30 transition-all flex items-center gap-1.5 shadow-md active:scale-95"
+            className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs border border-rose-500/30 transition-all flex items-center gap-1.5 shadow-md active:scale-[0.98]"
           >
-            <Square className="w-3.5 h-3.5 fill-current" /> Stop Download
+            <SquareSolid className="w-3.5 h-3.5" /> Stop Download
           </button>
         ) : (
           <button
             onClick={onStartDownload}
             disabled={!webtoonInfo || checkingInfo}
-            className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs border border-blue-500/30 transition-all flex items-center gap-2 shadow-md disabled:opacity-50 active:scale-95"
+            className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs border border-blue-400/20 transition-all flex items-center gap-2 shadow-md disabled:opacity-50 active:scale-[0.98]"
           >
-            <Play className="w-3.5 h-3.5 fill-current" /> Start Download
+            <PlaySolid className="w-3.5 h-3.5" /> Start Download
           </button>
         )}
       </div>

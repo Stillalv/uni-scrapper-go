@@ -32,14 +32,14 @@ func FetchWebtoonCatalog(lang string, forceRefresh bool, logCb func(string)) ([]
 		if info, err := os.Stat(cachePath); err == nil {
 			if time.Since(info.ModTime()) < 24*time.Hour {
 				if logCb != nil {
-					logCb(fmt.Sprintf("Memuat katalog komik '%s' dari cache lokal (cepat)...", strings.ToUpper(lang)))
+					logCb(fmt.Sprintf("Loading '%s' comic catalog from local cache (fast)...", strings.ToUpper(lang)))
 				}
 				data, err := os.ReadFile(cachePath)
 				if err == nil {
 					var cachedCatalog []Comic
 					if err := json.Unmarshal(data, &cachedCatalog); err == nil {
 						if logCb != nil {
-							logCb(fmt.Sprintf("Selesai! Ditemukan %d komik dari cache.", len(cachedCatalog)))
+							logCb(fmt.Sprintf("Done! Found %d comics from cache.", len(cachedCatalog)))
 						}
 						return cachedCatalog, nil
 					}
@@ -54,7 +54,7 @@ func FetchWebtoonCatalog(lang string, forceRefresh bool, logCb func(string)) ([]
 	var wg sync.WaitGroup
 
 	if logCb != nil {
-		logCb(fmt.Sprintf("Memulai pengambilan katalog komik lengkap untuk bahasa '%s'...", lang))
+		logCb(fmt.Sprintf("Starting full comic catalog fetch for language '%s'...", lang))
 	}
 
 	for _, day := range days {
@@ -78,7 +78,7 @@ func FetchWebtoonCatalog(lang string, forceRefresh bool, logCb func(string)) ([]
 					resp.Body.Close()
 				}
 				if logCb != nil {
-					logCb(fmt.Sprintf("[Error] Gagal mengakses %s", strings.ToUpper(dayName)))
+					logCb(fmt.Sprintf("[Error] Failed to access %s", strings.ToUpper(dayName)))
 				}
 				return
 			}
@@ -147,7 +147,7 @@ func FetchWebtoonCatalog(lang string, forceRefresh bool, logCb func(string)) ([]
 			})
 
 			if logCb != nil && localCount > 0 {
-				logCb(fmt.Sprintf("  Daftar %s selesai diproses. Ditemukan %d komik baru.", strings.ToUpper(dayName), localCount))
+				logCb(fmt.Sprintf("  %s list processed. Found %d new comics.", strings.ToUpper(dayName), localCount))
 			}
 		}(day)
 	}
@@ -169,7 +169,7 @@ func FetchWebtoonCatalog(lang string, forceRefresh bool, logCb func(string)) ([]
 	}
 
 	if logCb != nil {
-		logCb(fmt.Sprintf("Selesai! Ditemukan total %d komik unik di katalog.", len(catalog)))
+		logCb(fmt.Sprintf("Done! Found %d unique comics in the catalog.", len(catalog)))
 	}
 
 	return catalog, nil

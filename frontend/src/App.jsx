@@ -39,6 +39,14 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [serverStatus, setServerStatus] = useState('online');
 
+  const [botConfig, setBotConfig] = useState({
+    configured: false,
+    running: false,
+    token: '',
+    chatIDs: '',
+    lastError: ''
+  });
+
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('webtoon_theme') || 'dark';
   });
@@ -96,12 +104,12 @@ export default function App() {
       const data = await res.json();
       if (data.status === 'success') {
         setCatalog(data.catalog || []);
-        addToast('Katalog Siap', `Berhasil memuat ${data.catalog.length} komik Webtoon.`, 'success');
+        addToast('Catalog Ready', `Successfully loaded ${data.catalog.length} Webtoon comics.`, 'success');
       } else {
-        addToast('Gagal Katalog', data.message || 'Gagal memuat katalog komik.', 'error');
+        addToast('Catalog Failed', data.message || 'Failed to load comic catalog.', 'error');
       }
     } catch (err) {
-      addToast('Koneksi Gagal', 'Gagal terhubung ke server Go.', 'error');
+      addToast('Connection Failed', 'Failed to connect to the Go server.', 'error');
     } finally {
       setLoadingCatalog(false);
     }
@@ -110,6 +118,43 @@ export default function App() {
   useEffect(() => {
     loadCatalog('id', false);
   }, []);
+
+  // Load Telegram bot config on mount
+  const loadBotConfig = async () => {
+    try {
+      const res = await fetch('/api/bot-config');
+      const data = await res.json();
+      if (data.status === 'success') {
+        setBotConfig(data.bot);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    loadBotConfig();
+  }, []);
+
+  // Save Telegram bot config & (re)start bot
+  const handleSaveBotConfig = async (token, chatIDs) => {
+    try {
+      const res = await fetch('/api/bot-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, chatIDs }),
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        setBotConfig(data.bot);
+        addToast('Telegram Bot', data.bot.running ? 'Bot is online & ready for commands.' : 'Bot saved (inactive).', data.bot.running ? 'success' : 'info');
+      } else {
+        addToast('Save Failed', data.message || 'Failed to save bot configuration.', 'error');
+      }
+    } catch (err) {
+      addToast('Network Error', 'Failed to connect to server.', 'error');
+    }
+  };
 
   // Subscribe to SSE real-time events
   useEffect(() => {
@@ -128,8 +173,8 @@ export default function App() {
           }
         } else if (payload.type === 'CHAPTER_FINISHED') {
           addToast(
-            `Chapter ${payload.data.chapterNum} Selesai`,
-            `Berhasil mengunduh ${payload.data.imageCount} gambar (${payload.data.chapterTitle || 'Chapter'})`,
+            `Chapter ${payload.data.chapterNum} Completed`,
+            `Successfully downloaded ${payload.data.imageCount} images (${payload.data.chapterTitle || 'Chapter'})`,
             'success'
           );
           setHistoryList((prev) => [
@@ -145,9 +190,13 @@ export default function App() {
           ]);
         } else if (payload.type === 'TOAST_NOTIFICATION') {
           addToast(payload.data.title, payload.data.message, payload.data.type);
+        } else if (payload.type === 'DOWNLOAD_STOPPED') {
+          setIsDownloading(false);
+          setDownloadProgress(null);
+          addToast(payload.data.title || 'Download Stopped', payload.data.message, payload.data.type || 'warning');
         } else if (payload.type === 'DOWNLOAD_FINISHED') {
           setIsDownloading(false);
-          addToast('Download Selesai', payload.data.message, 'success');
+          addToast('Download Complete', payload.data.message, 'success');
           // Add to history
           setHistoryList((prev) => [
             {
@@ -175,7 +224,7 @@ export default function App() {
   const handleSelectComic = (comic) => {
     setSelectedComic(comic);
     setComicUrl(comic.url);
-    addToast('Komik Dipilih', `Memilih '${comic.title}' (#${comic.title_no})`, 'info');
+    addToast('Comic Selected', `Selected '${comic.title}' (#${comic.title_no})`, 'info');
     handleCheckInfo(comic.url);
   };
 
@@ -255,13 +304,13 @@ export default function App() {
       const data = await res.json();
       if (data.status !== 'started') {
         setIsDownloading(false);
-        addToast('Download Gagal', data.message || 'Gagal memulai unduhan.', 'error');
+        addToast('Download Failed', data.message || 'Failed to start download.', 'error');
       } else {
-        addToast('Unduhan Dimulai', `Mendownload ${webtoonInfo.Title}...`, 'info');
+        addToast('Download Started', `Downloading ${webtoonInfo.Title}...`, 'info');
       }
     } catch (err) {
       setIsDownloading(false);
-      addToast('Error Network', 'Gagal terhubung ke server unduhan.', 'error');
+      addToast('Network Error', 'Failed to connect to download server.', 'error');
     }
   };
 
@@ -269,18 +318,16 @@ export default function App() {
   const handleCancelDownload = async () => {
     try {
       await fetch('/api/cancel', { method: 'POST' });
-      addToast('Membatalkan...', 'Permintaan pembatalan dikirim.', 'warning');
+      addToast('Stopping...', 'The in-progress chapter will be completed, then the download stops.', 'warning');
     } catch (err) {
       console.error(err);
     }
   };
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden ${theme === 'light' ? 'light-theme bg-[#f5f5f7] text-[#1d1d1f]' : 'bg-[#141416] text-[#ededef]'}`}>
+    <div className={`theme-root flex flex-col h-screen overflow-hidden ${theme === 'light' ? 'light-theme bg-[#f5f5f7] text-[#1d1d1f]' : 'dark bg-[#141416] text-[#ededef]'}`}>
       {/* Header Toolbar */}
       <WindowHeader
-        isSidebarOpen={isSidebarOpen}
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         onSelectFolder={handleSelectFolder}
         onOpenFolder={handleOpenFolder}
         outputDir={outputDir}
@@ -294,6 +341,7 @@ export default function App() {
         {/* Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}
+          onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           selectedComic={selectedComic}
@@ -301,7 +349,7 @@ export default function App() {
         />
 
         {/* Workspace Main Panel */}
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-8 space-y-6">
           {activeTab === 'catalog' && (
             <CatalogView
               catalog={catalog}
@@ -366,6 +414,8 @@ export default function App() {
               selectedWorkers={selectedWorkers}
               setSelectedWorkers={setSelectedWorkers}
               onReloadCatalog={(refresh) => loadCatalog(selectedLang, refresh)}
+              botConfig={botConfig}
+              onSaveBotConfig={handleSaveBotConfig}
             />
           )}
 

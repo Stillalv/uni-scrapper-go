@@ -54,7 +54,7 @@ func ResolveWebtoonInfo(inputStr, lang string, logCb func(string)) (*WebtoonInfo
 
 	if titleNo == "" {
 		if logCb != nil {
-			logCb("[Error] Tidak dapat menemukan ID Webtoon (title_no) dari input.")
+			logCb("[Error] Unable to find Webtoon ID (title_no) from the input.")
 		}
 		return nil, fmt.Errorf("invalid title_no")
 	}
@@ -90,9 +90,9 @@ func ResolveWebtoonInfo(inputStr, lang string, logCb func(string)) (*WebtoonInfo
 
 	if err != nil || resp == nil || resp.StatusCode != 200 {
 		if logCb != nil {
-			logCb(fmt.Sprintf("[Error] Gagal menghubungkan ke server setelah 3 percobaan: %v", err))
+			logCb(fmt.Sprintf("[Error] Failed to reach the server after 3 attempts: %v", err))
 		}
-		return nil, fmt.Errorf("gagal terhubung ke server Webtoon: %v", err)
+		return nil, fmt.Errorf("failed to connect to Webtoon server: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -151,7 +151,7 @@ func GetAllEpisodes(listURL string, logCb func(string)) ([]Episode, error) {
 
 	for {
 		if logCb != nil && (page == 1 || page%5 == 0) {
-			logCb(fmt.Sprintf(" -> Memuat halaman daftar episode (%d)...", page))
+			logCb(fmt.Sprintf(" -> Loading episode list page (%d)...", page))
 		}
 
 		eps := fetchEpisodePage(listURL, page, logCb)
@@ -178,7 +178,7 @@ func GetAllEpisodes(listURL string, logCb func(string)) ([]Episode, error) {
 	}
 
 	if len(episodes) == 0 {
-		return nil, fmt.Errorf("0 episode ditemukan")
+		return nil, fmt.Errorf("0 episodes found")
 	}
 
 	sort.Slice(episodes, func(i, j int) bool {

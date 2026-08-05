@@ -149,10 +149,6 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 // downloadSingleImage downloads a single image with retry logic
 func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bool {
 	for attempt := 0; attempt < 3; attempt++ {
-		if atomic.LoadInt32(cfg.StopRequested) == 1 {
-			return false
-		}
-
 		req, err := http.NewRequest("GET", task.URL, nil)
 		if err != nil {
 			return false
@@ -308,6 +304,10 @@ func DownloadEpisodesWithGranularProgress(
 	allTasks := make(chan imageTask, finalTotalImages)
 	chapterCounts := make(map[int]int)
 	chapterFinishedSlice := make([]int32, totalCh)
+	// Highest chapter index with at least one completed task (the "current" chapter).
+	var latestDoneChapter int32 = -1
+	// Drain target frozen at Stop time: only this chapter is completed, all others halt.
+	var drainChapter int32 = -1
 
 	for _, scan := range scannedChapters {
 		if len(scan.ImageURLs) == 0 {
@@ -355,8 +355,18 @@ func DownloadEpisodesWithGranularProgress(
 			}()
 
 			for task := range allTasks {
+				// Drain mode: once Stop is requested, freeze the drain target to
+				// the chapter that was currently being downloaded (the last one
+				// with completed work). Only that single chapter is finished —
+				// every other chapter is abandoned so the download halts right
+				// after the current one completes.
 				if atomic.LoadInt32(cfg.StopRequested) == 1 {
-					return
+					if atomic.LoadInt32(&drainChapter) == -1 {
+						atomic.CompareAndSwapInt32(&drainChapter, -1, atomic.LoadInt32(&latestDoneChapter))
+					}
+					if atomic.LoadInt32(&drainChapter) != int32(task.ChIdx) {
+						return
+					}
 				}
 
 				fileName := fmt.Sprintf("%03d%s", task.Index, task.Ext)
@@ -382,17 +392,16 @@ func DownloadEpisodesWithGranularProgress(
 					_ = downloadSingleImage(task, filePath, cfg)
 				}
 
-				if atomic.LoadInt32(cfg.StopRequested) == 1 {
-					workerMu.Lock()
-					if workerID-1 < len(workerList) {
-						workerList[workerID-1] = WorkerStatus{ID: workerID, ImageFile: "-", Status: "Idle", Active: false}
-					}
-					workerMu.Unlock()
-					return
-				}
-
 				currentTotal := atomic.AddInt32(&totalDownloaded, 1)
 				chDone := atomic.AddInt32(&chapterFinishedSlice[task.ChIdx], 1)
+
+				// Track the highest chapter with completed work (drives the drain target).
+				for {
+					cur := atomic.LoadInt32(&latestDoneChapter)
+					if int32(task.ChIdx) <= cur || atomic.CompareAndSwapInt32(&latestDoneChapter, cur, int32(task.ChIdx)) {
+						break
+					}
+				}
 
 				// Calculate smooth monotonically increasing percentage
 				pct := (float64(currentTotal) / float64(finalTotalImages)) * 100.0

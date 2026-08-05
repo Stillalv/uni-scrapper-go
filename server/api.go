@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 
 	"uni-scraper-go/engine"
@@ -14,6 +15,8 @@ import (
 
 type SavedConfig struct {
 	LastOutputDir string `json:"lastOutputDir"`
+	BotToken      string `json:"botToken,omitempty"`
+	BotChatIDs    string `json:"botChatIDs,omitempty"`
 }
 
 func getConfigFilePaths() []string {
@@ -50,18 +53,36 @@ func getConfigFilePaths() []string {
 	return paths
 }
 
-func LoadSavedOutputDir() string {
+func LoadConfig() SavedConfig {
 	for _, file := range getConfigFilePaths() {
 		data, err := os.ReadFile(file)
 		if err != nil {
 			continue
 		}
 		var cfg SavedConfig
-		if err := json.Unmarshal(data, &cfg); err == nil && cfg.LastOutputDir != "" {
-			cleanPath := filepath.Clean(cfg.LastOutputDir)
-			_ = os.MkdirAll(cleanPath, 0755)
-			return cleanPath
+		if err := json.Unmarshal(data, &cfg); err == nil {
+			return cfg
 		}
+	}
+	return SavedConfig{}
+}
+
+func SaveConfig(cfg SavedConfig) {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return
+	}
+	for _, file := range getConfigFilePaths() {
+		_ = os.WriteFile(file, data, 0644)
+	}
+}
+
+func LoadSavedOutputDir() string {
+	cfg := LoadConfig()
+	if cfg.LastOutputDir != "" {
+		cleanPath := filepath.Clean(cfg.LastOutputDir)
+		_ = os.MkdirAll(cleanPath, 0755)
+		return cleanPath
 	}
 	pwd, _ := os.Getwd()
 	return pwd
@@ -74,15 +95,9 @@ func SaveOutputDir(path string) {
 	cleanPath := filepath.Clean(path)
 	_ = os.MkdirAll(cleanPath, 0755)
 
-	cfg := SavedConfig{LastOutputDir: cleanPath}
-	data, err := json.MarshalIndent(cfg, "", "  ")
-	if err != nil {
-		return
-	}
-
-	for _, file := range getConfigFilePaths() {
-		_ = os.WriteFile(file, data, 0644)
-	}
+	cfg := LoadConfig()
+	cfg.LastOutputDir = cleanPath
+	SaveConfig(cfg)
 }
 
 func showNativeFolderPicker() (string, bool) {
@@ -111,7 +126,7 @@ var (
 	currentWebtoonInfo *engine.WebtoonInfo
 	currentEpisodes    []engine.Episode
 	currentEpisodeMap  map[int]engine.Episode
-	downloadStopFlag   int32
+	downloadStopFlag   *int32 // stop flag of the currently active download (replaced per download)
 	isDownloading      bool
 	currentOutputDir   string = LoadSavedOutputDir()
 )
@@ -129,7 +144,7 @@ func HandleCatalog(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": fmt.Sprintf("Gagal memuat katalog: %v", err),
+			"message": fmt.Sprintf("Failed to load catalog: %v", err),
 		})
 		return
 	}
@@ -146,7 +161,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": "URL / ID Webtoon tidak valid.",
+			"message": "Invalid Webtoon URL / ID.",
 		})
 		return
 	}
@@ -159,7 +174,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": fmt.Sprintf("Gagal memproses Webtoon: %v", err),
+			"message": fmt.Sprintf("Failed to process Webtoon: %v", err),
 		})
 		return
 	}
@@ -168,7 +183,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 	if err != nil || len(episodes) == 0 {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": "Gagal memuat daftar episode.",
+			"message": "Failed to load episode list.",
 		})
 		return
 	}
@@ -196,7 +211,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 			"TitleNo":       info.TitleNo,
 			"ListURL":       info.ListURL,
 			"TotalEpisodes": len(episodes),
-			"EpisodeRange":  fmt.Sprintf("Chapter %d s/d %d", minEp, maxEp),
+			"EpisodeRange":  fmt.Sprintf("Chapter %d to %d", minEp, maxEp),
 			"OutputDir":     currentOutputDir,
 		},
 	})
@@ -267,21 +282,33 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if currentWebtoonInfo == nil || len(currentEpisodes) == 0 {
+	if err := launchDownload(currentWebtoonInfo, currentEpisodes, currentEpisodeMap, req, nil); err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": "Please check comic info first.",
+			"message": err.Error(),
 		})
 		return
 	}
 
-	selectedEps := engine.ParseChapterSelection(req.Range, currentEpisodeMap)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "started",
+		"message": fmt.Sprintf("Download started for %d chapters.", len(req.Range)),
+	})
+}
+
+// launchDownload is the shared download runner used by both the HTTP API
+// (native app UI) and the Telegram bot. It receives the comic data directly
+// so the bot can download comics it checked itself (no dependency on the
+// UI-only global state). notify receives all engine events
+// (PROGRESS_UPDATE, CHAPTER_FINISHED, DOWNLOAD_FINISHED, DOWNLOAD_STOPPED).
+func launchDownload(info *engine.WebtoonInfo, episodes []engine.Episode, epMap map[int]engine.Episode, req DownloadRequest, notify func(event string, data map[string]interface{})) error {
+	if info == nil || len(episodes) == 0 || len(epMap) == 0 {
+		return fmt.Errorf("Please check comic info first.")
+	}
+
+	selectedEps := engine.ParseChapterSelection(req.Range, epMap)
 	if len(selectedEps) == 0 {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "error",
-			"message": "Invalid chapter range selection.",
-		})
-		return
+		return fmt.Errorf("Invalid chapter range selection.")
 	}
 
 	if req.OutputDir != "" {
@@ -293,7 +320,15 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 		workers = 6
 	}
 
-	atomic.StoreInt32(&downloadStopFlag, 0)
+	// Reject a new download while the previous one is still draining.
+	if isDownloading {
+		return fmt.Errorf("A download is already running. Wait for it to stop, then try again.")
+	}
+
+	// Fresh stop flag per download so a later restart can never reset the
+	// flag of a download that is still draining after Stop was pressed.
+	stopFlag := new(int32)
+	downloadStopFlag = stopFlag
 	isDownloading = true
 
 	cfg := engine.DownloadConfig{
@@ -301,13 +336,8 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 		Format:        req.Format,
 		MaxWorkers:    workers,
 		Quality:       90,
-		StopRequested: &downloadStopFlag,
+		StopRequested: stopFlag,
 	}
-
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status":  "started",
-		"message": fmt.Sprintf("Download started for %d chapters.", len(selectedEps)),
-	})
 
 	// Run download asynchronously with SSE real-time updates
 	go func() {
@@ -316,55 +346,153 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 		}()
 
 		progressAdapter := func(progData map[string]interface{}) {
-			Broadcaster.Broadcast("PROGRESS_UPDATE", progData)
+			evtType, _ := progData["type"].(string)
+			if evtType == "CHAPTER_FINISHED" {
+				Broadcaster.Broadcast("CHAPTER_FINISHED", progData)
+			} else {
+				Broadcaster.Broadcast("PROGRESS_UPDATE", progData)
+			}
+			if notify != nil {
+				notify(evtType, progData)
+			}
 		}
 
 		successCh, totalCh := engine.DownloadEpisodesWithGranularProgress(
-			currentWebtoonInfo,
+			info,
 			selectedEps,
 			cfg,
 			progressAdapter,
 		)
 
-		if atomic.LoadInt32(&downloadStopFlag) == 1 {
-			Broadcaster.Broadcast("TOAST_NOTIFICATION", map[string]interface{}{
-				"title":   "Download Cancelled",
-				"message": fmt.Sprintf("Download stopped. Completed %d of %d chapters.", successCh, totalCh),
-				"type":    "warning",
-			})
+		if atomic.LoadInt32(downloadStopFlag) == 1 {
+			isDownloading = false
+			data := map[string]interface{}{
+				"title":          "Download Stopped",
+				"completedCount": successCh,
+				"totalCount":     totalCh,
+				"format":         cfg.Format,
+				"outputDir":      cfg.OutputDir,
+				"message":        fmt.Sprintf("The in-progress chapter was completed, then the download stopped. Finished %d of %d chapters.", successCh, totalCh),
+				"type":           "warning",
+			}
+			Broadcaster.Broadcast("DOWNLOAD_STOPPED", data)
+			if notify != nil {
+				notify("DOWNLOAD_STOPPED", data)
+			}
 		} else {
-			Broadcaster.Broadcast("DOWNLOAD_FINISHED", map[string]interface{}{
-				"title":          currentWebtoonInfo.Title,
+			isDownloading = false
+			data := map[string]interface{}{
+				"title":          info.Title,
 				"completedCount": successCh,
 				"totalCount":     totalCh,
 				"format":         cfg.Format,
 				"outputDir":      cfg.OutputDir,
 				"message":        fmt.Sprintf("Download complete! %d of %d chapters downloaded.", successCh, totalCh),
-			})
+			}
+			Broadcaster.Broadcast("DOWNLOAD_FINISHED", data)
+			if notify != nil {
+				notify("DOWNLOAD_FINISHED", data)
+			}
 		}
 	}()
+	return nil
+}
+
+// IsDownloadActive reports whether a download is currently running or draining.
+func IsDownloadActive() bool {
+	return isDownloading
+}
+
+// RequestStopDownload asks the active download to stop: the current chapter
+// is finished first (drain mode), then the download halts.
+func RequestStopDownload() string {
+	if flag := downloadStopFlag; flag != nil {
+		atomic.StoreInt32(flag, 1)
+	}
+	if t, ok := engine.HTTPClient.Transport.(*http.Transport); ok {
+		t.CloseIdleConnections()
+	}
+
+	// Broadcast instantaneous worker reset to UI
+	Broadcaster.Broadcast("PROGRESS_UPDATE", map[string]interface{}{
+		"status":        "Stopping... finishing current chapter",
+		"activeWorkers": []engine.WorkerStatus{},
+	})
+
+	return "Stop requested. The in-progress chapter will be completed, then the download stops."
 }
 
 func HandleCancelDownload(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	if isDownloading {
-		atomic.StoreInt32(&downloadStopFlag, 1)
-		if t, ok := engine.HTTPClient.Transport.(*http.Transport); ok {
-			t.CloseIdleConnections()
-		}
-	}
-	isDownloading = false
-
-	// Broadcast instantaneous worker reset to UI
-	Broadcaster.Broadcast("PROGRESS_UPDATE", map[string]interface{}{
-		"status":        "Download Stopped",
-		"activeWorkers": []engine.WorkerStatus{},
-	})
-
+	msg := RequestStopDownload()
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status":  "success",
-		"message": "Cancellation request sent. All workers stopped.",
+		"message": msg,
 	})
+}
+
+// InitBotFromConfig starts the Telegram bot at app launch if a token is saved.
+func InitBotFromConfig() {
+	cfg := LoadConfig()
+	if cfg.BotToken != "" {
+		Bot.SetConfig(cfg.BotToken, cfg.BotChatIDs)
+		Bot.Start()
+	}
+}
+
+func HandleBotConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	switch r.Method {
+	case http.MethodGet:
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"bot":    Bot.Status(),
+		})
+		return
+
+	case http.MethodPost:
+		var req struct {
+			Token   string `json:"token"`
+			ChatIDs string `json:"chatIDs"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":  "error",
+				"message": "Invalid request payload.",
+			})
+			return
+		}
+
+		cfg := LoadConfig()
+		// Empty fields keep the previously saved values (no need to re-type
+		// the token/chat IDs every time the app restarts).
+		if strings.TrimSpace(req.Token) != "" {
+			cfg.BotToken = strings.TrimSpace(req.Token)
+		}
+		if strings.TrimSpace(req.ChatIDs) != "" {
+			cfg.BotChatIDs = strings.TrimSpace(req.ChatIDs)
+		}
+		SaveConfig(cfg)
+
+		Bot.Stop()
+		if cfg.BotToken != "" {
+			Bot.SetConfig(cfg.BotToken, cfg.BotChatIDs)
+			Bot.Start()
+		}
+
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "success",
+			"bot":    Bot.Status(),
+		})
+		return
+
+	default:
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":  "error",
+			"message": "Method not allowed.",
+		})
+	}
 }
 
 func HandleBenchmark(w http.ResponseWriter, r *http.Request) {

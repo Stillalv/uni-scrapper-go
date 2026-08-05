@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 :root {
+  color-scheme: dark;
   /* Dark Mode (Default Apple Dark) */
   --bg-main: #141416;
   --text-main: #ededef;
@@ -18,10 +19,14 @@
   --shadow-custom: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --btn-secondary-bg: rgba(255, 255, 255, 0.08);
   --btn-secondary-hover: rgba(255, 255, 255, 0.15);
+  --accent: #0A84FF;
+  --accent-hover: #409CFF;
+  --accent-soft: rgba(10, 132, 255, 0.15);
 }
 
 .light-theme {
-  /* Apple macOS Light Mode (San Francisco Minimalist Light) */
+  color-scheme: light;
+  /* Apple macOS Light Mode */
   --bg-main: #f5f5f7;
   --text-main: #1d1d1f;
   --text-sub: #515154;
@@ -33,9 +38,12 @@
   --input-bg: rgba(240, 240, 245, 0.9);
   --border-color: rgba(0, 0, 0, 0.08);
   --icon-monochrome: #515154;
-  --shadow-custom: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
+  --shadow-custom: 0 1px 2px rgba(0, 0, 0, 0.03), 0 4px 20px 0 rgba(0, 0, 0, 0.05);
   --btn-secondary-bg: rgba(0, 0, 0, 0.05);
   --btn-secondary-hover: rgba(0, 0, 0, 0.1);
+  --accent: #0071E3;
+  --accent-hover: #0077ED;
+  --accent-soft: rgba(0, 113, 227, 0.10);
 }
 
 .light-theme body, .light-theme {
@@ -83,8 +91,14 @@
 }
 .glass-input:focus {
   border-color: #0071e3;
-  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25);
   outline: none;
+}
+
+/* Keep white check/label on selected AppleSelect row in light theme */
+.light-theme .bg-blue-600.text-white,
+.light-theme button.bg-blue-600 {
+  color: #ffffff !important;
 }
 
 /* Light mode text contrast overrides for tailwind utility classes */
@@ -141,19 +155,155 @@
   border-color: rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Minimalist Monochrome Icon Styles (No multi-colored rainbow icons) */
-.light-theme .text-yellow-400,
-.light-theme .text-amber-400,
-.light-theme .text-emerald-400,
-.light-theme .text-purple-400,
-.light-theme .text-indigo-400 {
-  color: #515154 !important;
+/* Apple semantic accent colors — light theme */
+.light-theme .text-blue-600 {
+  color: #0071E3 !important;
+}
+.light-theme .text-blue-500 {
+  color: #0071E3 !important;
+}
+.light-theme .text-blue-400 {
+  color: #007AFF !important;
+}
+.light-theme .text-blue-300 {
+  color: #0071E3 !important;
+}
+.light-theme .bg-blue-600 {
+  background-color: #0071E3 !important;
+}
+.light-theme .hover\:bg-blue-500:hover {
+  background-color: #0077ED !important;
+}
+.light-theme .bg-blue-600\/10 {
+  background-color: rgba(0, 113, 227, 0.10) !important;
+}
+.light-theme .bg-blue-600\/20 {
+  background-color: rgba(0, 113, 227, 0.18) !important;
+}
+.light-theme .bg-blue-600\/30 {
+  background-color: rgba(0, 113, 227, 0.28) !important;
+}
+.light-theme .bg-blue-500\/10 {
+  background-color: rgba(0, 113, 227, 0.10) !important;
+}
+.light-theme .border-blue-500\/20,
+.light-theme .border-blue-500\/30,
+.light-theme .border-blue-500\/40,
+.light-theme .border-blue-500\/50,
+.light-theme .border-blue-600\/20,
+.light-theme .border-blue-600\/30 {
+  border-color: rgba(0, 113, 227, 0.28) !important;
+}
+.light-theme .border-blue-600,
+.light-theme .border-blue-500 {
+  border-color: #0071E3 !important;
+}
+.light-theme .hover\:border-blue-500\/40:hover {
+  border-color: rgba(0, 113, 227, 0.40) !important;
+}
+.light-theme .group-hover\:text-blue-600:hover,
+.light-theme .group:hover .group-hover\:text-blue-600 {
+  color: #0071E3 !important;
 }
 
-.light-theme .bg-yellow-400\/10,
+/* Apple Green */
+.light-theme .text-emerald-400,
+.light-theme .text-emerald-300 {
+  color: #34C759 !important;
+}
+.light-theme .text-emerald-500,
+.light-theme .text-emerald-600 {
+  color: #248A3D !important;
+}
 .light-theme .bg-emerald-500\/10,
-.light-theme .bg-blue-500\/10 {
-  background-color: rgba(0, 0, 0, 0.05) !important;
+.light-theme .bg-emerald-500\/20,
+.light-theme .bg-emerald-600\/10 {
+  background-color: rgba(52, 199, 89, 0.12) !important;
+}
+.light-theme .border-emerald-500\/30,
+.light-theme .border-emerald-500\/40 {
+  border-color: rgba(52, 199, 89, 0.35) !important;
+}
+
+/* Apple Orange / Yellow */
+.light-theme .text-amber-400,
+.light-theme .text-amber-500 {
+  color: #FF9500 !important;
+}
+.light-theme .text-yellow-400 {
+  color: #FF9500 !important;
+}
+.light-theme .bg-amber-500\/10,
+.light-theme .bg-amber-500\/20,
+.light-theme .bg-yellow-400\/10 {
+  background-color: rgba(255, 149, 0, 0.12) !important;
+}
+.light-theme .border-amber-500\/30,
+.light-theme .border-amber-500\/40 {
+  border-color: rgba(255, 149, 0, 0.35) !important;
+}
+
+/* Apple Red */
+.light-theme .text-rose-400 {
+  color: #FF3B30 !important;
+}
+.light-theme .text-rose-600,
+.light-theme .text-rose-500 {
+  color: #D70015 !important;
+}
+.light-theme .bg-rose-600 {
+  background-color: #FF3B30 !important;
+}
+.light-theme .hover\:bg-rose-500:hover {
+  background-color: #FF453A !important;
+}
+.light-theme .bg-rose-600\/10,
+.light-theme .bg-rose-600\/20 {
+  background-color: rgba(255, 59, 48, 0.10) !important;
+}
+.light-theme .border-rose-500\/30 {
+  border-color: rgba(255, 59, 48, 0.30) !important;
+}
+
+/* Apple Indigo / Purple */
+.light-theme .text-indigo-400,
+.light-theme .text-indigo-500 {
+  color: #5856D6 !important;
+}
+.light-theme .text-purple-400 {
+  color: #AF52DE !important;
+}
+.light-theme .bg-indigo-500\/10,
+.light-theme .bg-purple-500\/10 {
+  background-color: rgba(88, 86, 214, 0.10) !important;
+}
+
+/* Keep white text on solid Apple blue / red fills */
+.light-theme .bg-blue-600,
+.light-theme .bg-blue-600.text-white,
+.light-theme button.bg-blue-600,
+.light-theme [class~="bg-blue-600"] {
+  color: #ffffff !important;
+}
+.light-theme .bg-blue-600 .text-white,
+.light-theme .bg-blue-600 svg,
+.light-theme .bg-blue-600 span,
+.light-theme [class~="bg-blue-600"] .text-white,
+.light-theme [class~="bg-blue-600"] svg {
+  color: #ffffff !important;
+}
+.light-theme .bg-rose-600,
+.light-theme .bg-rose-600.text-white,
+.light-theme button.bg-rose-600 {
+  color: #ffffff !important;
+}
+.light-theme .bg-rose-600 svg,
+.light-theme .bg-rose-600 .text-white {
+  color: #ffffff !important;
+}
+.light-theme .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.22) !important;
+  color: #ffffff !important;
 }
 
 /* Scrollbar styling */
@@ -170,6 +320,12 @@
 }
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(140, 140, 145, 0.5);
+}
+.light-theme ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}
+.light-theme ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.28);
 }
 
 /* macOS Traffic Light Buttons */
@@ -191,4 +347,52 @@
 
 .worker-active {
   animation: workerPulse 1.5s infinite ease-in-out;
+}
+
+/* Toast / drawer entrance animations */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.28s ease-out both;
+}
+
+.animate-slide-left {
+  animation: slide-left 0.28s ease-out both;
+}
+
+/* Smooth theme switching (light <-> dark) */
+body,
+.glass-panel,
+.glass-card,
+.glass-sidebar,
+.glass-input,
+h1, h2, h3, h4,
+p, span, label,
+button, input, select,
+svg {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease, stroke 0.3s ease;
+}
+
+.theme-root {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
