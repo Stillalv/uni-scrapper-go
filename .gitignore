@@ -1,0 +1,24 @@
+# Binaries & Executables
+# (Note: webtoon-scraper.exe is included in release commits)
+
+# Dependency directories
+node_modules/
+frontend/node_modules/
+
+# Build outputs
+dist/
+frontend/dist/
+
+# Local configuration & state files (contains user local path)
+config.json
+.webtoon_scraper_config.json
+
+# Temporary Scraped Cache & Log Files
+catalog_cache_*.json
+*.log
+*.tmp
+*.b64
+
+# System Files
+.DS_Store
+Thumbs.db
