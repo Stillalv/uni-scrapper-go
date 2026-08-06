@@ -70,6 +70,7 @@ type chapterScanResult struct {
 	ChIdx      int
 	Episode    Episode
 	ImageURLs  []string
+	HasBanner  bool
 	ChapterDir string
 	ChNum      string
 }
@@ -80,33 +81,33 @@ var defaultHeaders = map[string]string{
 }
 
 // extractImageURLs fetches a chapter viewer page and extracts all image URLs
-func extractImageURLs(viewerURL string) ([]string, error) {
+func extractImageURLs(viewerURL string) ([]string, bool, error) {
 	req, err := http.NewRequest("GET", viewerURL, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	req.Header.Set("User-Agent", defaultHeaders["User-Agent"])
 	req.Header.Set("Referer", "https://www.webtoons.com/")
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP %d", resp.StatusCode)
+		return nil, false, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	htmlContent := string(bodyBytes)
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	var bannerURL string
@@ -170,12 +171,13 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 
 	// Build final ordered list: Index 0 = Banner Intro (000.webp), Index 1..N = Panel pages (001.webp, 002.webp...)
 	var finalURLs []string
-	if bannerURL != "" {
+	hasBanner := bannerURL != ""
+	if hasBanner {
 		finalURLs = append(finalURLs, bannerURL)
 	}
 	finalURLs = append(finalURLs, panelURLs...)
 
-	return finalURLs, nil
+	return finalURLs, hasBanner, nil
 }
 
 // downloadSingleImage downloads a single image with retry logic
@@ -298,9 +300,10 @@ func DownloadEpisodesWithGranularProgress(
 				}
 
 				ep := selected[chIdx]
-				imageURLs, err := extractImageURLs(ep.URL)
+				imageURLs, hasBanner, err := extractImageURLs(ep.URL)
 				if err == nil && len(imageURLs) > 0 {
 					scannedChapters[chIdx].ImageURLs = imageURLs
+					scannedChapters[chIdx].HasBanner = hasBanner
 					atomic.AddInt32(&totalImages, int32(len(imageURLs)))
 				}
 
@@ -349,8 +352,12 @@ func DownloadEpisodesWithGranularProgress(
 		chapterCounts[scan.ChIdx] = chImgCount
 
 		for i, imgURL := range scan.ImageURLs {
+			taskIdx := i + 1
+			if scan.HasBanner {
+				taskIdx = i
+			}
 			allTasks <- imageTask{
-				Index:              i + 1,
+				Index:              taskIdx,
 				URL:                imgURL,
 				Viewer:             scan.Episode.URL,
 				Dir:                scan.ChapterDir,
@@ -555,7 +562,7 @@ func DownloadEpisodes(info *WebtoonInfo, selected []Episode, cfg DownloadConfig,
 		chapterDir := filepath.Join(targetBase, folderName)
 		_ = os.MkdirAll(chapterDir, 0755)
 
-		imageURLs, err := extractImageURLs(ep.URL)
+		imageURLs, hasBanner, err := extractImageURLs(ep.URL)
 		if err != nil || len(imageURLs) == 0 {
 			continue
 		}
@@ -592,8 +599,12 @@ func DownloadEpisodes(info *WebtoonInfo, selected []Episode, cfg DownloadConfig,
 		}
 
 		for idx, imgURL := range imageURLs {
+			taskIdx := idx + 1
+			if hasBanner {
+				taskIdx = idx
+			}
 			taskChan <- imageTask{
-				Index:  idx + 1,
+				Index:  taskIdx,
 				URL:    imgURL,
 				Viewer: ep.URL,
 				Dir:    chapterDir,
