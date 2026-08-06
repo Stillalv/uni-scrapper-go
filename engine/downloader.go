@@ -105,41 +105,62 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 	}
 
 	htmlContent := string(bodyBytes)
-	var imageURLs []string
-
-	// Fast regex extraction
-	re := regexp.MustCompile(`data-url="([^"]+)"`)
-	matches := re.FindAllStringSubmatch(htmlContent, -1)
-	for _, m := range matches {
-		if len(m) > 1 && !strings.Contains(m[1], "bg_transparency.png") {
-			imageURLs = append(imageURLs, m[1])
-		}
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
+	if err != nil {
+		return nil, err
 	}
 
-	// Fallback regex for class="_images"
+	var imageURLs []string
+	isPanelURL := func(src string) bool {
+		s := strings.ToLower(src)
+		return src != "" &&
+			!strings.Contains(s, "bg_transparency.png") &&
+			!strings.Contains(s, "thumb_") &&
+			!strings.Contains(s, "warning") &&
+			!strings.Contains(s, "notice_") &&
+			!strings.Contains(s, "banner_")
+	}
+
+	// 1. Precise extraction from #_imageList container
+	doc.Find("#_imageList img._images, #_imageList img").Each(func(i int, s *goquery.Selection) {
+		classAttr, _ := s.Attr("class")
+		if strings.Contains(classAttr, "_thumbnailImages") {
+			return
+		}
+		src, _ := s.Attr("data-url")
+		if src == "" {
+			src, _ = s.Attr("src")
+		}
+		if isPanelURL(src) {
+			imageURLs = append(imageURLs, src)
+		}
+	})
+
+	// 2. Fallback for custom layouts or class="_images"
 	if len(imageURLs) == 0 {
-		imgRe := regexp.MustCompile(`<img[^>]+class="[^"]*_images[^"]*"[^>]+(?:data-url|src)="([^"]+)"`)
-		matches2 := imgRe.FindAllStringSubmatch(htmlContent, -1)
-		for _, m := range matches2 {
-			if len(m) > 1 && !strings.Contains(m[1], "bg_transparency.png") {
+		doc.Find("img._images").Each(func(i int, s *goquery.Selection) {
+			classAttr, _ := s.Attr("class")
+			if strings.Contains(classAttr, "_thumbnailImages") {
+				return
+			}
+			src, _ := s.Attr("data-url")
+			if src == "" {
+				src, _ = s.Attr("src")
+			}
+			if isPanelURL(src) {
+				imageURLs = append(imageURLs, src)
+			}
+		})
+	}
+
+	// 3. Fallback regex for data-url if goquery yields no results
+	if len(imageURLs) == 0 {
+		re := regexp.MustCompile(`data-url="([^"]+)"`)
+		matches := re.FindAllStringSubmatch(htmlContent, -1)
+		for _, m := range matches {
+			if len(m) > 1 && isPanelURL(m[1]) {
 				imageURLs = append(imageURLs, m[1])
 			}
-		}
-	}
-
-	// Fallback to goquery
-	if len(imageURLs) == 0 {
-		doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
-		if err == nil {
-			doc.Find("#_itemList img, img._images").Each(func(i int, s *goquery.Selection) {
-				src, _ := s.Attr("data-url")
-				if src == "" {
-					src, _ = s.Attr("src")
-				}
-				if src != "" && !strings.Contains(src, "bg_transparency.png") {
-					imageURLs = append(imageURLs, src)
-				}
-			})
 		}
 	}
 
