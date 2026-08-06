@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -110,15 +109,17 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 		return nil, err
 	}
 
-	var imageURLs []string
-	isPanelURL := func(src string) bool {
-		s := strings.ToLower(src)
-		return src != "" &&
-			!strings.Contains(s, "bg_transparency.png") &&
-			!strings.Contains(s, "thumb_") &&
-			!strings.Contains(s, "warning") &&
-			!strings.Contains(s, "notice_") &&
-			!strings.Contains(s, "banner_")
+	var bannerURL string
+	var panelURLs []string
+
+	isBanner := func(s string) bool {
+		sl := strings.ToLower(s)
+		return strings.Contains(sl, "warning") || strings.Contains(sl, "notice_") || strings.Contains(sl, "banner_")
+	}
+
+	isIgnored := func(s string) bool {
+		sl := strings.ToLower(s)
+		return s == "" || strings.Contains(sl, "bg_transparency.png") || strings.Contains(sl, "thumb_")
 	}
 
 	// 1. Precise extraction from #_imageList container
@@ -131,13 +132,20 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 		if src == "" {
 			src, _ = s.Attr("src")
 		}
-		if isPanelURL(src) {
-			imageURLs = append(imageURLs, src)
+		if isIgnored(src) {
+			return
 		}
+		if isBanner(src) {
+			if bannerURL == "" {
+				bannerURL = src
+			}
+			return
+		}
+		panelURLs = append(panelURLs, src)
 	})
 
 	// 2. Fallback for custom layouts or class="_images"
-	if len(imageURLs) == 0 {
+	if len(panelURLs) == 0 {
 		doc.Find("img._images").Each(func(i int, s *goquery.Selection) {
 			classAttr, _ := s.Attr("class")
 			if strings.Contains(classAttr, "_thumbnailImages") {
@@ -147,24 +155,27 @@ func extractImageURLs(viewerURL string) ([]string, error) {
 			if src == "" {
 				src, _ = s.Attr("src")
 			}
-			if isPanelURL(src) {
-				imageURLs = append(imageURLs, src)
+			if isIgnored(src) {
+				return
 			}
+			if isBanner(src) {
+				if bannerURL == "" {
+					bannerURL = src
+				}
+				return
+			}
+			panelURLs = append(panelURLs, src)
 		})
 	}
 
-	// 3. Fallback regex for data-url if goquery yields no results
-	if len(imageURLs) == 0 {
-		re := regexp.MustCompile(`data-url="([^"]+)"`)
-		matches := re.FindAllStringSubmatch(htmlContent, -1)
-		for _, m := range matches {
-			if len(m) > 1 && isPanelURL(m[1]) {
-				imageURLs = append(imageURLs, m[1])
-			}
-		}
+	// Build final ordered list: Index 0 = Banner Intro (000.webp), Index 1..N = Panel pages (001.webp, 002.webp...)
+	var finalURLs []string
+	if bannerURL != "" {
+		finalURLs = append(finalURLs, bannerURL)
 	}
+	finalURLs = append(finalURLs, panelURLs...)
 
-	return imageURLs, nil
+	return finalURLs, nil
 }
 
 // downloadSingleImage downloads a single image with retry logic
