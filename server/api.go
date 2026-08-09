@@ -10,7 +10,10 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"uni-scraper-go/engine"
+	"uni-scraper-go/engine/downloader"
+	"uni-scraper-go/engine/model"
+	"uni-scraper-go/engine/providers"
+	"uni-scraper-go/engine/utils"
 )
 
 type SavedConfig struct {
@@ -123,9 +126,9 @@ type DownloadRequest struct {
 }
 
 var (
-	currentWebtoonInfo *engine.WebtoonInfo
-	currentEpisodes    []engine.Episode
-	currentEpisodeMap  map[int]engine.Episode
+	currentWebtoonInfo *model.ComicInfo
+	currentEpisodes    []model.Episode
+	currentEpisodeMap  map[int]model.Episode
 	downloadStopFlag   *int32 // stop flag of the currently active download (replaced per download)
 	isDownloading      bool
 	currentOutputDir   string = LoadSavedOutputDir()
@@ -141,15 +144,7 @@ func HandleCatalog(w http.ResponseWriter, r *http.Request) {
 	refreshStr := r.URL.Query().Get("refresh")
 	forceRefresh := refreshStr == "true"
 
-	var catalog []engine.Comic
-	var err error
-
-	if source == "mangaplus_id" || source == "mangaplus" {
-		catalog, err = engine.FetchMangaPlusCatalog(forceRefresh, nil)
-	} else {
-		catalog, err = engine.FetchWebtoonCatalog(lang, forceRefresh, nil)
-	}
-
+	catalog, err := providers.FetchCatalogBySource(source, lang, forceRefresh, nil)
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
@@ -179,14 +174,18 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 		req.Lang = "id"
 	}
 
-	var info *engine.WebtoonInfo
-	var episodes []engine.Episode
+	var info *model.ComicInfo
+	var episodes []model.Episode
 	var err error
 
-	if engine.IsMangaPlusInput(req.URL) {
-		info, episodes, err = engine.ResolveMangaPlusInfo(req.URL, nil)
+	if p, ok := providers.FindMatchingProvider(req.URL); ok {
+		info, episodes, err = p.ResolveComic(req.URL, nil)
+	} else if p, ok := providers.Get("webtoon_" + req.Lang); ok {
+		info, episodes, err = p.ResolveComic(req.URL, nil)
+	} else if p, ok := providers.Get("webtoon_id"); ok {
+		info, episodes, err = p.ResolveComic(req.URL, nil)
 	} else {
-		info, episodes, err = engine.ResolveWebtoonInfo(req.URL, req.Lang, nil)
+		err = fmt.Errorf("no provider found for URL")
 	}
 
 	if err != nil || len(episodes) == 0 {
@@ -199,7 +198,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 
 	currentWebtoonInfo = info
 	currentEpisodes = episodes
-	currentEpisodeMap = make(map[int]engine.Episode)
+	currentEpisodeMap = make(map[int]model.Episode)
 	for _, ep := range episodes {
 		currentEpisodeMap[ep.EpisodeNo] = ep
 	}
@@ -310,12 +309,12 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 // so the bot can download comics it checked itself (no dependency on the
 // UI-only global state). notify receives all engine events
 // (PROGRESS_UPDATE, CHAPTER_FINISHED, DOWNLOAD_FINISHED, DOWNLOAD_STOPPED).
-func launchDownload(info *engine.WebtoonInfo, episodes []engine.Episode, epMap map[int]engine.Episode, req DownloadRequest, notify func(event string, data map[string]interface{})) error {
+func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[int]model.Episode, req DownloadRequest, notify func(event string, data map[string]interface{})) error {
 	if info == nil || len(episodes) == 0 || len(epMap) == 0 {
 		return fmt.Errorf("Please check comic info first.")
 	}
 
-	selectedEps := engine.ParseChapterSelection(req.Range, epMap)
+	selectedEps := utils.ParseChapterSelection(req.Range, epMap)
 	if len(selectedEps) == 0 {
 		return fmt.Errorf("Invalid chapter range selection.")
 	}
@@ -340,7 +339,7 @@ func launchDownload(info *engine.WebtoonInfo, episodes []engine.Episode, epMap m
 	downloadStopFlag = stopFlag
 	isDownloading = true
 
-	cfg := engine.DownloadConfig{
+	cfg := model.DownloadConfig{
 		OutputDir:     currentOutputDir,
 		Format:        req.Format,
 		MaxWorkers:    workers,
@@ -366,7 +365,7 @@ func launchDownload(info *engine.WebtoonInfo, episodes []engine.Episode, epMap m
 			}
 		}
 
-		successCh, totalCh := engine.DownloadEpisodesWithGranularProgress(
+		successCh, totalCh := downloader.DownloadEpisodesWithGranularProgress(
 			info,
 			selectedEps,
 			cfg,
@@ -418,14 +417,14 @@ func RequestStopDownload() string {
 	if flag := downloadStopFlag; flag != nil {
 		atomic.StoreInt32(flag, 1)
 	}
-	if t, ok := engine.HTTPClient.Transport.(*http.Transport); ok {
+	if t, ok := utils.HTTPClient.Transport.(*http.Transport); ok {
 		t.CloseIdleConnections()
 	}
 
 	// Broadcast instantaneous worker reset to UI
 	Broadcaster.Broadcast("PROGRESS_UPDATE", map[string]interface{}{
 		"status":        "Stopping... finishing current chapter",
-		"activeWorkers": []engine.WorkerStatus{},
+		"activeWorkers": []model.WorkerStatus{},
 	})
 
 	return "Stop requested. The in-progress chapter will be completed, then the download stops."
@@ -512,7 +511,7 @@ func HandleBenchmark(w http.ResponseWriter, r *http.Request) {
 		fmt.Sscanf(workersStr, "%d", &workers)
 	}
 
-	result := engine.RunActualWorkerBenchmark(workers)
+	result := downloader.RunActualWorkerBenchmark(workers)
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"status": "success",
 		"data":   result,

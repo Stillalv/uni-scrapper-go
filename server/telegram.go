@@ -13,8 +13,10 @@ import (
 	"sync"
 	"time"
 
-	"uni-scraper-go/engine"
+	"uni-scraper-go/engine/downloader"
+	"uni-scraper-go/engine/model"
 	"uni-scraper-go/engine/providers"
+	"uni-scraper-go/engine/utils"
 )
 
 // ============================================================
@@ -73,12 +75,12 @@ type botChatState struct {
 	awaitingPath          bool
 	awaitingCatalog       bool
 	awaitingCatalogSearch bool
-	catalogList           []engine.Comic
+	catalogList           []model.CatalogItem
 	catalogOffset         int
 	catalogFilter         string
-	info                  *engine.WebtoonInfo
-	episodes              []engine.Episode
-	episodeMap            map[int]engine.Episode
+	info                  *model.ComicInfo
+	episodes              []model.Episode
+	episodeMap            map[int]model.Episode
 	// ID of the last dialog/menu message — edited in place to avoid piling up
 	menuMsgID int64
 	// Per-chat download preferences (mirror of the app's settings)
@@ -182,7 +184,7 @@ func (b *TelegramBot) post(method string, payload map[string]interface{}) ([]byt
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := engine.HTTPClient.Do(req)
+	resp, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -310,7 +312,7 @@ func (b *TelegramBot) poll(stopChan chan struct{}) {
 	_, _ = b.post("deleteWebhook", map[string]interface{}{"drop_pending_updates": true})
 	b.setError("")
 
-	client := engine.HTTPClient
+	client := utils.HTTPClient
 
 	for {
 		select {
@@ -785,35 +787,34 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 	}
 	b.mu.Unlock()
 
-	var info *engine.WebtoonInfo
-	var episodes []engine.Episode
+	var info *model.ComicInfo
+	var episodes []model.Episode
 	var err error
 
-	if engine.IsMangaPlusInput(input) {
-		info, episodes, err = engine.ResolveMangaPlusInfo(input, nil)
-	} else {
-		info, episodes, err = engine.ResolveWebtoonInfo(input, lang, nil)
-		if err != nil && !isDigit(input) {
-			catalog, catErr := providers.FetchCatalogBySource(source, lang, false, nil)
-			if catErr == nil && len(catalog) > 0 {
-				matches := filteredCatalog(catalog, input)
-				if len(matches) == 1 {
-					b.replyNew(chatID, fmt.Sprintf("🔎 Found comic: %s\n⏳ Loading episode data...", matches[0].Title), nil)
-					if engine.IsMangaPlusInput(matches[0].URL) {
-						info, episodes, err = engine.ResolveMangaPlusInfo(matches[0].URL, nil)
-					} else {
-						info, episodes, err = engine.ResolveWebtoonInfo(matches[0].URL, lang, nil)
-					}
-				} else if len(matches) > 1 {
-					b.setState(chatID, func(s *botChatState) {
-						s.catalogList = matches
-						s.catalogOffset = 0
-						s.catalogFilter = ""
-						s.awaitingCatalog = true
-					})
-					b.sendCatalogPage(chatID)
-					return
+	if p, ok := providers.FindMatchingProvider(input); ok {
+		info, episodes, err = p.ResolveComic(input, nil)
+	} else if p, ok := providers.Get("webtoon_" + lang); ok {
+		info, episodes, err = p.ResolveComic(input, nil)
+	}
+
+	if err != nil && !isDigit(input) {
+		catalog, catErr := providers.FetchCatalogBySource(source, lang, false, nil)
+		if catErr == nil && len(catalog) > 0 {
+			matches := filteredCatalog(catalog, input)
+			if len(matches) == 1 {
+				b.replyNew(chatID, fmt.Sprintf("🔎 Found comic: %s\n⏳ Loading episode data...", matches[0].Title), nil)
+				if p, ok := providers.FindMatchingProvider(matches[0].URL); ok {
+					info, episodes, err = p.ResolveComic(matches[0].URL, nil)
 				}
+			} else if len(matches) > 1 {
+				b.setState(chatID, func(s *botChatState) {
+					s.catalogList = matches
+					s.catalogOffset = 0
+					s.catalogFilter = ""
+					s.awaitingCatalog = true
+				})
+				b.sendCatalogPage(chatID)
+				return
 			}
 		}
 	}
@@ -824,7 +825,7 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 		return
 	}
 
-	epMap := make(map[int]engine.Episode)
+	epMap := make(map[int]model.Episode)
 	for _, ep := range episodes {
 		epMap[ep.EpisodeNo] = ep
 	}
@@ -877,12 +878,12 @@ func (b *TelegramBot) showCatalog(chatID int64, forceRefresh bool) {
 }
 
 // filteredCatalog narrows the catalog by keyword (title, title ID, genre).
-func filteredCatalog(catalog []engine.Comic, filter string) []engine.Comic {
+func filteredCatalog(catalog []model.CatalogItem, filter string) []model.CatalogItem {
 	if filter == "" {
 		return catalog
 	}
 	f := strings.ToLower(filter)
-	var out []engine.Comic
+	var out []model.CatalogItem
 	for _, c := range catalog {
 		if strings.Contains(strings.ToLower(c.Title), f) ||
 			strings.Contains(strings.ToLower(c.Genre), f) ||
@@ -910,7 +911,7 @@ func (b *TelegramBot) searchCatalog(chatID int64, keyword string) {
 func (b *TelegramBot) sendCatalogPage(chatID int64) {
 	b.mu.Lock()
 	st := b.states[chatID]
-	var catalog []engine.Comic
+	var catalog []model.CatalogItem
 	offset := 0
 	filter := ""
 	if st != nil {
@@ -1018,9 +1019,9 @@ func (b *TelegramBot) pickCatalogItem(chatID int64, text string) {
 func (b *TelegramBot) startDownloadForChat(chatID int64, rangeStr string) {
 	b.mu.Lock()
 	st := b.states[chatID]
-	var info *engine.WebtoonInfo
-	var episodes []engine.Episode
-	var epMap map[int]engine.Episode
+	var info *model.ComicInfo
+	var episodes []model.Episode
+	var epMap map[int]model.Episode
 	workers := 6
 	format := "WEBP"
 	if st != nil {
@@ -1152,7 +1153,7 @@ func (b *TelegramBot) runBenchmark(chatID int64) {
 	var results []benchRes
 
 	for _, t := range threadCounts {
-		res := engine.RunActualWorkerBenchmark(t)
+		res := downloader.RunActualWorkerBenchmark(t)
 		speed, _ := res["speed"].(string)
 		bandwidth, _ := res["bandwidth"].(string)
 		latency, _ := res["latency"].(string)

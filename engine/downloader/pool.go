@@ -1,4 +1,4 @@
-package engine
+package downloader
 
 import (
 	"fmt"
@@ -12,47 +12,15 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"uni-scraper-go/engine/model"
+	"uni-scraper-go/engine/providers/mangaplus"
 	"uni-scraper-go/engine/utils"
 )
-
-// HTTPClient is the shared HTTP client tuned for high-speed multi-simultaneous connections.
-var HTTPClient = utils.HTTPClient
-
-// DownloadConfig holds settings for downloading episodes.
-type DownloadConfig struct {
-	OutputDir     string
-	Format        string // WEBP, JPEG, PNG
-	MaxWorkers    int
-	Quality       int
-	StopRequested *int32 // Atomic flag
-}
-
-type imageTask struct {
-	Index              int
-	URL                string
-	EncryptionKey      string
-	Viewer             string
-	Dir                string
-	Ext                string
-	Format             string
-	GlobalIndex        int // Absolute index across ALL chapters (for smooth progress)
-	ChNum              string
-	ChIdx              int
-	ChapterTotalImages int
-}
-
-type WorkerStatus struct {
-	ID        int     `json:"id"`
-	ImageFile string  `json:"imageFile"`
-	Status    string  `json:"status"`
-	Progress  float64 `json:"progress"`
-	Active    bool    `json:"active"`
-}
 
 // chapterScanResult holds pre-scanned image URLs for a single chapter
 type chapterScanResult struct {
 	ChIdx          int
-	Episode        Episode
+	Episode        model.Episode
 	ImageURLs      []string
 	EncryptionKeys []string
 	HasBanner      bool
@@ -60,16 +28,11 @@ type chapterScanResult struct {
 	ChNum          string
 }
 
-var defaultHeaders = map[string]string{
-	"User-Agent":      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-	"Accept-Language": "id,en-US;q=0.9,en;q=0.8",
-}
-
 // extractImageURLs fetches a chapter viewer page and extracts all image URLs
 func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 	if strings.Contains(viewerURL, "mangaplus.shueisha.co.jp") {
-		chID := ExtractChapterIDFromURL(viewerURL)
-		urls, keys, err := FetchMangaPlusChapterPages(chID)
+		chID := mangaplus.ExtractChapterIDFromURL(viewerURL)
+		urls, keys, err := mangaplus.FetchChapterPages(chID)
 		if err != nil {
 			return nil, nil, false, err
 		}
@@ -80,10 +43,10 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 	if err != nil {
 		return nil, nil, false, err
 	}
-	req.Header.Set("User-Agent", defaultHeaders["User-Agent"])
+	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
 	req.Header.Set("Referer", "https://www.webtoons.com/")
 
-	resp, err := HTTPClient.Do(req)
+	resp, err := utils.HTTPClient.Do(req)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -117,7 +80,6 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 		return s == "" || strings.Contains(sl, "bg_transparency.png") || strings.Contains(sl, "thumb_")
 	}
 
-	// 1. Precise extraction from #_imageList container
 	doc.Find("#_imageList img._images, #_imageList img").Each(func(i int, s *goquery.Selection) {
 		classAttr, _ := s.Attr("class")
 		if strings.Contains(classAttr, "_thumbnailImages") {
@@ -139,7 +101,6 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 		panelURLs = append(panelURLs, src)
 	})
 
-	// 2. Fallback for custom layouts or class="_images"
 	if len(panelURLs) == 0 {
 		doc.Find("img._images").Each(func(i int, s *goquery.Selection) {
 			classAttr, _ := s.Attr("class")
@@ -163,7 +124,6 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 		})
 	}
 
-	// Build final ordered list: Index 0 = Banner Intro (000.webp), Index 1..N = Panel pages (001.webp, 002.webp...)
 	var finalURLs []string
 	hasBanner := bannerURL != ""
 	if hasBanner {
@@ -174,14 +134,13 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 	return finalURLs, nil, hasBanner, nil
 }
 
-// downloadSingleImage downloads a single image with retry logic
-func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bool {
+func downloadSingleImage(task model.ImageTask, filePath string, cfg model.DownloadConfig) bool {
 	for attempt := 0; attempt < 3; attempt++ {
 		req, err := http.NewRequest("GET", task.URL, nil)
 		if err != nil {
 			return false
 		}
-		for k, v := range defaultHeaders {
+		for k, v := range utils.DefaultHeaders {
 			req.Header.Set(k, v)
 		}
 		if strings.Contains(task.URL, "tokyo-cdn.com") {
@@ -191,7 +150,7 @@ func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bo
 			req.Header.Set("Referer", task.Viewer)
 		}
 
-		resp, err := HTTPClient.Do(req)
+		resp, err := utils.HTTPClient.Do(req)
 		if err != nil {
 			time.Sleep(50 * time.Millisecond)
 			continue
@@ -211,7 +170,7 @@ func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bo
 		}
 
 		if task.EncryptionKey != "" {
-			bodyBytes = ApplyMangaPlusXORDecryption(bodyBytes, task.EncryptionKey)
+			bodyBytes = mangaplus.XORDecrypt(bodyBytes, task.EncryptionKey)
 		}
 
 		err = os.WriteFile(filePath, bodyBytes, 0644)
@@ -225,13 +184,10 @@ func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bo
 	return false
 }
 
-// DownloadEpisodesWithGranularProgress downloads selected episodes with real-time SSE progress tracking.
-// Phase 1: Pre-scan ALL chapters to get exact total image count (no estimation).
-// Phase 2: Download all images with smooth, monotonically increasing progress.
 func DownloadEpisodesWithGranularProgress(
-	info *WebtoonInfo,
-	selected []Episode,
-	cfg DownloadConfig,
+	info *model.ComicInfo,
+	selected []model.Episode,
+	cfg model.DownloadConfig,
 	progressCb func(map[string]interface{}),
 ) (int, int) {
 	imgFormat := strings.ToUpper(cfg.Format)
@@ -242,20 +198,16 @@ func DownloadEpisodesWithGranularProgress(
 		ext = ".png"
 	}
 
-	comicFolder := SanitizeFilename(info.Title)
+	comicFolder := utils.SanitizeFilename(info.Title)
 	targetBase := filepath.Join(cfg.OutputDir, comicFolder)
 	_ = os.MkdirAll(targetBase, 0755)
 
 	totalCh := len(selected)
 
-	// ============================================================
-	// PHASE 1: Fast parallel pre-scan all chapters (8 goroutines)
-	// ============================================================
 	scannedChapters := make([]chapterScanResult, totalCh)
 	var totalImages int32 = 0
 	var scannedCount int32 = 0
 
-	// Pre-compute chapter metadata (dirs, chNums) before concurrent scan
 	for chIdx, ep := range selected {
 		chNum := ep.ChNum
 		if chNum == "" {
@@ -263,7 +215,7 @@ func DownloadEpisodesWithGranularProgress(
 		}
 		folderName := ep.FolderName
 		if folderName == "" {
-			folderName = SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, ep.Title))
+			folderName = utils.SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, ep.Title))
 		}
 		chapterDir := filepath.Join(targetBase, folderName)
 		_ = os.MkdirAll(chapterDir, 0755)
@@ -277,7 +229,6 @@ func DownloadEpisodesWithGranularProgress(
 		}
 	}
 
-	// Concurrent scan with 8 goroutines
 	scanWorkers := 8
 	if scanWorkers > totalCh {
 		scanWorkers = totalCh
@@ -330,18 +281,13 @@ func DownloadEpisodesWithGranularProgress(
 
 	finalTotalImages := int(atomic.LoadInt32(&totalImages))
 	if finalTotalImages == 0 {
-		finalTotalImages = 1 // prevent division by zero
+		finalTotalImages = 1
 	}
 
-	// ============================================================
-	// PHASE 2: Download all images via a single continuous worker pipeline
-	// ============================================================
-	allTasks := make(chan imageTask, finalTotalImages)
+	allTasks := make(chan model.ImageTask, finalTotalImages)
 	chapterCounts := make(map[int]int)
 	chapterFinishedSlice := make([]int32, totalCh)
-	// Highest chapter index with at least one completed task (the "current" chapter).
 	var latestDoneChapter int32 = -1
-	// Drain target frozen at Stop time: only this chapter is completed, all others halt.
 	var drainChapter int32 = -1
 
 	for _, scan := range scannedChapters {
@@ -360,7 +306,7 @@ func DownloadEpisodesWithGranularProgress(
 			if i < len(scan.EncryptionKeys) {
 				encKey = scan.EncryptionKeys[i]
 			}
-			allTasks <- imageTask{
+			allTasks <- model.ImageTask{
 				Index:              taskIdx,
 				URL:                imgURL,
 				EncryptionKey:      encKey,
@@ -376,16 +322,15 @@ func DownloadEpisodesWithGranularProgress(
 	}
 	close(allTasks)
 
-	workerList := make([]WorkerStatus, cfg.MaxWorkers)
+	workerList := make([]model.WorkerStatus, cfg.MaxWorkers)
 	for i := 0; i < cfg.MaxWorkers; i++ {
-		workerList[i] = WorkerStatus{ID: i + 1, ImageFile: "-", Status: "Waiting...", Active: false}
+		workerList[i] = model.WorkerStatus{ID: i + 1, ImageFile: "-", Status: "Waiting...", Active: false}
 	}
 	var workerMu sync.Mutex
-
 	var totalDownloaded int32 = 0
 	var successCh int32 = 0
-	var wg sync.WaitGroup
 
+	var wg sync.WaitGroup
 	for w := 0; w < cfg.MaxWorkers; w++ {
 		wg.Add(1)
 		go func(workerID int) {
@@ -393,17 +338,12 @@ func DownloadEpisodesWithGranularProgress(
 			defer func() {
 				workerMu.Lock()
 				if workerID-1 < len(workerList) {
-					workerList[workerID-1] = WorkerStatus{ID: workerID, ImageFile: "-", Status: "Idle", Active: false}
+					workerList[workerID-1] = model.WorkerStatus{ID: workerID, ImageFile: "-", Status: "Idle", Active: false}
 				}
 				workerMu.Unlock()
 			}()
 
 			for task := range allTasks {
-				// Drain mode: once Stop is requested, freeze the drain target to
-				// the chapter that was currently being downloaded (the last one
-				// with completed work). Only that single chapter is finished —
-				// every other chapter is abandoned so the download halts right
-				// after the current one completes.
 				if atomic.LoadInt32(cfg.StopRequested) == 1 {
 					if atomic.LoadInt32(&drainChapter) == -1 {
 						atomic.CompareAndSwapInt32(&drainChapter, -1, atomic.LoadInt32(&latestDoneChapter))
@@ -416,10 +356,9 @@ func DownloadEpisodesWithGranularProgress(
 				fileName := fmt.Sprintf("%03d%s", task.Index, task.Ext)
 				filePath := filepath.Join(task.Dir, fileName)
 
-				// Update worker status in real-time
 				workerMu.Lock()
 				if workerID-1 < len(workerList) {
-					workerList[workerID-1] = WorkerStatus{
+					workerList[workerID-1] = model.WorkerStatus{
 						ID:        workerID,
 						ImageFile: fileName,
 						Status:    fmt.Sprintf("Image #%d (%s)", task.Index, fileName),
@@ -429,9 +368,8 @@ func DownloadEpisodesWithGranularProgress(
 				}
 				workerMu.Unlock()
 
-				// Resume check: skip already downloaded file
 				if fi, err := os.Stat(filePath); err == nil && fi.Size() > 0 {
-					// File already exists on disk — Smart Skip!
+					// Skip existing file
 				} else {
 					_ = downloadSingleImage(task, filePath, cfg)
 				}
@@ -439,7 +377,6 @@ func DownloadEpisodesWithGranularProgress(
 				currentTotal := atomic.AddInt32(&totalDownloaded, 1)
 				chDone := atomic.AddInt32(&chapterFinishedSlice[task.ChIdx], 1)
 
-				// Track the highest chapter with completed work (drives the drain target).
 				for {
 					cur := atomic.LoadInt32(&latestDoneChapter)
 					if int32(task.ChIdx) <= cur || atomic.CompareAndSwapInt32(&latestDoneChapter, cur, int32(task.ChIdx)) {
@@ -447,16 +384,14 @@ func DownloadEpisodesWithGranularProgress(
 					}
 				}
 
-				// Calculate smooth monotonically increasing percentage
 				pct := (float64(currentTotal) / float64(finalTotalImages)) * 100.0
 				if pct > 100.0 {
 					pct = 100.0
 				}
 
-				// Broadcast real-time SSE progress
 				if progressCb != nil {
 					workerMu.Lock()
-					activeWorkerCopy := make([]WorkerStatus, len(workerList))
+					activeWorkerCopy := make([]model.WorkerStatus, len(workerList))
 					copy(activeWorkerCopy, workerList)
 					workerMu.Unlock()
 
@@ -475,7 +410,6 @@ func DownloadEpisodesWithGranularProgress(
 					})
 				}
 
-				// If last image of a chapter is completed, send CHAPTER_FINISHED event
 				if int(chDone) == task.ChapterTotalImages {
 					atomic.AddInt32(&successCh, 1)
 					if progressCb != nil {
@@ -498,13 +432,12 @@ func DownloadEpisodesWithGranularProgress(
 
 	wg.Wait()
 
-	// Broadcast final 100% completion
 	if progressCb != nil && atomic.LoadInt32(cfg.StopRequested) == 0 {
 		workerMu.Lock()
 		for i := 0; i < cfg.MaxWorkers; i++ {
-			workerList[i] = WorkerStatus{ID: i + 1, ImageFile: "-", Status: "Idle", Active: false}
+			workerList[i] = model.WorkerStatus{ID: i + 1, ImageFile: "-", Status: "Idle", Active: false}
 		}
-		finalWorkers := make([]WorkerStatus, len(workerList))
+		finalWorkers := make([]model.WorkerStatus, len(workerList))
 		copy(finalWorkers, workerList)
 		workerMu.Unlock()
 
@@ -526,127 +459,6 @@ func DownloadEpisodesWithGranularProgress(
 	return int(successCh), totalCh
 }
 
-// DownloadEpisodes downloads selected episodes in parallel (simpler version without SSE).
-func DownloadEpisodes(info *WebtoonInfo, selected []Episode, cfg DownloadConfig, progressCb func(current, total int), statusCb func(string), logCb func(string)) (int, int) {
-	imgFormat := strings.ToUpper(cfg.Format)
-	ext := ".webp"
-	if imgFormat == "JPEG" || imgFormat == "JPG" {
-		ext = ".jpg"
-	} else if imgFormat == "PNG" {
-		ext = ".png"
-	}
-
-	comicFolder := SanitizeFilename(info.Title)
-	targetBase := filepath.Join(cfg.OutputDir, comicFolder)
-	_ = os.MkdirAll(targetBase, 0755)
-
-	totalCh := len(selected)
-	successCh := 0
-
-	for chIdx, ep := range selected {
-		if atomic.LoadInt32(cfg.StopRequested) == 1 {
-			break
-		}
-
-		chNum := ep.ChNum
-		if chNum == "" {
-			chNum = fmt.Sprintf("%03d", ep.EpisodeNo)
-		}
-
-		if statusCb != nil {
-			statusCb(fmt.Sprintf("Downloading Ch %s (%d/%d)...", chNum, chIdx+1, totalCh))
-		}
-		if progressCb != nil {
-			progressCb(chIdx, totalCh)
-		}
-
-		folderName := ep.FolderName
-		if folderName == "" {
-			folderName = SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, ep.Title))
-		}
-		chapterDir := filepath.Join(targetBase, folderName)
-		_ = os.MkdirAll(chapterDir, 0755)
-
-		imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL)
-		if err != nil || len(imageURLs) == 0 {
-			continue
-		}
-
-		totalImgs := len(imageURLs)
-		taskChan := make(chan imageTask, totalImgs)
-		var chSuccessCount int32
-		var wg sync.WaitGroup
-
-		workers := cfg.MaxWorkers
-		if workers < 1 {
-			workers = 6
-		}
-
-		for w := 0; w < workers; w++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				for task := range taskChan {
-					if atomic.LoadInt32(cfg.StopRequested) == 1 {
-						return
-					}
-					fileName := fmt.Sprintf("%03d%s", task.Index, task.Ext)
-					filePath := filepath.Join(task.Dir, fileName)
-					if fi, err := os.Stat(filePath); err == nil && fi.Size() > 0 {
-						atomic.AddInt32(&chSuccessCount, 1)
-						continue
-					}
-					if downloadSingleImage(task, filePath, cfg) {
-						atomic.AddInt32(&chSuccessCount, 1)
-					}
-				}
-			}()
-		}
-
-		for idx, imgURL := range imageURLs {
-			taskIdx := idx + 1
-			if hasBanner {
-				taskIdx = idx
-			}
-			encKey := ""
-			if idx < len(keys) {
-				encKey = keys[idx]
-			}
-			taskChan <- imageTask{
-				Index:         taskIdx,
-				URL:           imgURL,
-				EncryptionKey: encKey,
-				Viewer:        ep.URL,
-				Dir:           chapterDir,
-				Ext:           ext,
-				Format:        imgFormat,
-			}
-		}
-		close(taskChan)
-		wg.Wait()
-
-		if atomic.LoadInt32(cfg.StopRequested) == 1 {
-			break
-		}
-
-		chSuccess := int(chSuccessCount)
-		if chSuccess == totalImgs {
-			successCh++
-		}
-
-		if t, ok := HTTPClient.Transport.(*http.Transport); ok {
-			t.CloseIdleConnections()
-		}
-	}
-
-	if progressCb != nil {
-		progressCb(totalCh, totalCh)
-	}
-
-	return successCh, totalCh
-}
-
-// RunActualWorkerBenchmark executes a real live concurrency benchmark using Go worker Goroutines.
 func RunActualWorkerBenchmark(workers int) map[string]interface{} {
 	if workers < 1 {
 		workers = 6
@@ -681,18 +493,19 @@ func RunActualWorkerBenchmark(workers int) map[string]interface{} {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for imgURL := range taskChan {
-				req, err := http.NewRequest("GET", imgURL, nil)
+			for taskURL := range taskChan {
+				req, err := http.NewRequest("GET", taskURL, nil)
 				if err != nil {
 					continue
 				}
-				req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+				req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
 				req.Header.Set("Referer", "https://www.webtoons.com/")
 
-				resp, err := HTTPClient.Do(req)
+				resp, err := utils.HTTPClient.Do(req)
 				if err != nil {
 					continue
 				}
+
 				if resp.StatusCode == 200 {
 					written, _ := io.Copy(io.Discard, resp.Body)
 					atomic.AddInt32(&downloadedCount, 1)

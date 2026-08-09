@@ -2,12 +2,19 @@ package main
 
 import (
 	"fmt"
-	"uni-scraper-go/engine"
+
+	"uni-scraper-go/engine/providers"
 )
 
 func main() {
 	fmt.Println("=== Testing MANGA Plus Indonesia Catalog Fetch ===")
-	comics, err := engine.FetchMangaPlusCatalog(false, func(msg string) {
+	p, ok := providers.Get("mangaplus_id")
+	if !ok {
+		fmt.Println("Provider mangaplus_id not registered!")
+		return
+	}
+
+	comics, err := p.FetchCatalog(false, func(msg string) {
 		fmt.Println("LOG:", msg)
 	})
 	if err != nil {
@@ -20,7 +27,7 @@ func main() {
 	}
 
 	fmt.Println("\n=== Testing MANGA Plus Title Info Resolve (Boruto #400004) ===")
-	info, eps, err := engine.ResolveMangaPlusInfo("400004", func(msg string) {
+	info, eps, err := p.ResolveComic("400004", func(msg string) {
 		fmt.Println("LOG:", msg)
 	})
 	if err != nil {
