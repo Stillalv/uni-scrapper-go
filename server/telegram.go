@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"uni-scraper-go/engine"
+	"uni-scraper-go/engine/providers"
 )
 
 // ============================================================
@@ -84,10 +85,11 @@ type botChatState struct {
 	workers int
 	format  string
 	lang    string
+	source  string
 }
 
 func newBotChatState() *botChatState {
-	return &botChatState{workers: 6, format: "WEBP", lang: "id"}
+	return &botChatState{workers: 6, format: "WEBP", lang: "id", source: "webtoon_id"}
 }
 
 // TelegramBot manages long-polling against the Telegram Bot API.
@@ -743,6 +745,11 @@ func (b *TelegramBot) handleCallback(cb *tgCallbackQuery) {
 		b.setState(chatID, func(s *botChatState) { s.lang = l })
 		toast = "✅ Language: " + strings.ToUpper(l)
 		b.showSettings(chatID)
+	case "src_webtoon_id", "src_mangaplus_id", "src_webtoon_en":
+		s := strings.TrimPrefix(cb.Data, "src_")
+		b.setState(chatID, func(st *botChatState) { st.source = s })
+		toast = "✅ Source: " + s
+		go b.showCatalog(chatID, false)
 	case "help":
 		b.showHelpMenu(chatID)
 	}
@@ -763,25 +770,40 @@ func isDigit(s string) bool {
 }
 
 func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
-	b.replyNew(chatID, "⏳ Processing webtoon info...", nil)
+	b.replyNew(chatID, "⏳ Processing comic info...", nil)
 
 	b.mu.Lock()
 	lang := "id"
-	if st := b.states[chatID]; st != nil && st.lang != "" {
-		lang = st.lang
+	source := "webtoon_id"
+	if st := b.states[chatID]; st != nil {
+		if st.lang != "" {
+			lang = st.lang
+		}
+		if st.source != "" {
+			source = st.source
+		}
 	}
 	b.mu.Unlock()
 
-	info, _, err := engine.ResolveWebtoonInfo(input, lang, nil)
-	if err != nil {
-		// Only fallback to title search if input is NOT pure digits
-		if !isDigit(input) {
-			catalog, catErr := engine.FetchWebtoonCatalog(lang, false, nil)
+	var info *engine.WebtoonInfo
+	var episodes []engine.Episode
+	var err error
+
+	if engine.IsMangaPlusInput(input) {
+		info, episodes, err = engine.ResolveMangaPlusInfo(input, nil)
+	} else {
+		info, episodes, err = engine.ResolveWebtoonInfo(input, lang, nil)
+		if err != nil && !isDigit(input) {
+			catalog, catErr := providers.FetchCatalogBySource(source, lang, false, nil)
 			if catErr == nil && len(catalog) > 0 {
 				matches := filteredCatalog(catalog, input)
 				if len(matches) == 1 {
 					b.replyNew(chatID, fmt.Sprintf("🔎 Found comic: %s\n⏳ Loading episode data...", matches[0].Title), nil)
-					info, _, err = engine.ResolveWebtoonInfo(matches[0].URL, lang, nil)
+					if engine.IsMangaPlusInput(matches[0].URL) {
+						info, episodes, err = engine.ResolveMangaPlusInfo(matches[0].URL, nil)
+					} else {
+						info, episodes, err = engine.ResolveWebtoonInfo(matches[0].URL, lang, nil)
+					}
 				} else if len(matches) > 1 {
 					b.setState(chatID, func(s *botChatState) {
 						s.catalogList = matches
@@ -794,17 +816,11 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 				}
 			}
 		}
-
-		if err != nil {
-			b.setState(chatID, func(s *botChatState) { s.awaitingURL = true })
-			b.replyNew(chatID, fmt.Sprintf("❌ Comic not found for keyword: \"%s\"\n\n💡 Send another comic title, Webtoon URL, or Title ID (e.g. 9523):", input), nil)
-			return
-		}
 	}
 
-	episodes, err := engine.GetAllEpisodes(info.ListURL, nil)
 	if err != nil || len(episodes) == 0 {
-		b.replyNew(chatID, "❌ Failed to load episode list.", mainMenu())
+		b.setState(chatID, func(s *botChatState) { s.awaitingURL = true })
+		b.replyNew(chatID, fmt.Sprintf("❌ Comic not found for input: \"%s\"\n\n💡 Send another comic title, Webtoon/MANGA Plus URL, or Title ID (e.g. 400006):", input), nil)
 		return
 	}
 
@@ -835,12 +851,18 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 func (b *TelegramBot) showCatalog(chatID int64, forceRefresh bool) {
 	b.mu.Lock()
 	lang := "id"
-	if st := b.states[chatID]; st != nil && st.lang != "" {
-		lang = st.lang
+	source := "webtoon_id"
+	if st := b.states[chatID]; st != nil {
+		if st.lang != "" {
+			lang = st.lang
+		}
+		if st.source != "" {
+			source = st.source
+		}
 	}
 	b.mu.Unlock()
 
-	catalog, err := engine.FetchWebtoonCatalog(lang, forceRefresh, nil)
+	catalog, err := providers.FetchCatalogBySource(source, lang, forceRefresh, nil)
 	if err != nil {
 		b.replyNew(chatID, "❌ Failed to load catalog: "+err.Error(), mainMenu())
 		return
@@ -941,6 +963,11 @@ func (b *TelegramBot) sendCatalogPage(chatID int64) {
 	sb.WriteString("\nReply with a number to select a comic, or type a keyword to search.")
 
 	markup := &tgReplyMarkup{InlineKeyboard: [][]tgButton{}}
+	markup.InlineKeyboard = append(markup.InlineKeyboard, []tgButton{
+		{Text: "🇮🇩 Webtoon", CallbackData: "src_webtoon_id"},
+		{Text: "🔴 MANGA Plus", CallbackData: "src_mangaplus_id"},
+		{Text: "🇬🇧 Webtoon", CallbackData: "src_webtoon_en"},
+	})
 	row := []tgButton{}
 	if end < len(list) {
 		row = append(row, tgButton{Text: "➡️ Next", CallbackData: "katalog_next"})
