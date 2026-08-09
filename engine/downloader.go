@@ -3,7 +3,6 @@ package engine
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -13,27 +12,11 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"uni-scraper-go/engine/utils"
 )
 
 // HTTPClient is the shared HTTP client tuned for high-speed multi-simultaneous connections.
-var HTTPClient = &http.Client{
-	Timeout: 30 * time.Second,
-	Transport: &http.Transport{
-		MaxIdleConns:          1000,
-		MaxIdleConnsPerHost:   500,
-		MaxConnsPerHost:       500,
-		IdleConnTimeout:       120 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
-		TLSHandshakeTimeout:   5 * time.Second,
-		DisableKeepAlives:     false,
-		WriteBufferSize:       64 * 1024,
-		ReadBufferSize:        64 * 1024,
-		DialContext: (&net.Dialer{
-			Timeout:   5 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-	},
-}
+var HTTPClient = utils.HTTPClient
 
 // DownloadConfig holds settings for downloading episodes.
 type DownloadConfig struct {
@@ -47,6 +30,7 @@ type DownloadConfig struct {
 type imageTask struct {
 	Index              int
 	URL                string
+	EncryptionKey      string
 	Viewer             string
 	Dir                string
 	Ext                string
@@ -67,12 +51,13 @@ type WorkerStatus struct {
 
 // chapterScanResult holds pre-scanned image URLs for a single chapter
 type chapterScanResult struct {
-	ChIdx      int
-	Episode    Episode
-	ImageURLs  []string
-	HasBanner  bool
-	ChapterDir string
-	ChNum      string
+	ChIdx          int
+	Episode        Episode
+	ImageURLs      []string
+	EncryptionKeys []string
+	HasBanner      bool
+	ChapterDir     string
+	ChNum          string
 }
 
 var defaultHeaders = map[string]string{
@@ -81,33 +66,42 @@ var defaultHeaders = map[string]string{
 }
 
 // extractImageURLs fetches a chapter viewer page and extracts all image URLs
-func extractImageURLs(viewerURL string) ([]string, bool, error) {
+func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
+	if strings.Contains(viewerURL, "mangaplus.shueisha.co.jp") {
+		chID := ExtractChapterIDFromURL(viewerURL)
+		urls, keys, err := FetchMangaPlusChapterPages(chID)
+		if err != nil {
+			return nil, nil, false, err
+		}
+		return urls, keys, false, nil
+	}
+
 	req, err := http.NewRequest("GET", viewerURL, nil)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	req.Header.Set("User-Agent", defaultHeaders["User-Agent"])
 	req.Header.Set("Referer", "https://www.webtoons.com/")
 
 	resp, err := HTTPClient.Do(req)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return nil, false, fmt.Errorf("HTTP %d", resp.StatusCode)
+		return nil, nil, false, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	htmlContent := string(bodyBytes)
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 
 	var bannerURL string
@@ -177,7 +171,7 @@ func extractImageURLs(viewerURL string) ([]string, bool, error) {
 	}
 	finalURLs = append(finalURLs, panelURLs...)
 
-	return finalURLs, hasBanner, nil
+	return finalURLs, nil, hasBanner, nil
 }
 
 // downloadSingleImage downloads a single image with retry logic
@@ -190,7 +184,12 @@ func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bo
 		for k, v := range defaultHeaders {
 			req.Header.Set(k, v)
 		}
-		req.Header.Set("Referer", task.Viewer)
+		if strings.Contains(task.URL, "tokyo-cdn.com") {
+			req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
+			req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+		} else {
+			req.Header.Set("Referer", task.Viewer)
+		}
 
 		resp, err := HTTPClient.Do(req)
 		if err != nil {
@@ -204,19 +203,19 @@ func downloadSingleImage(task imageTask, filePath string, cfg DownloadConfig) bo
 			continue
 		}
 
-		// Zero-Allocation Stream Copy: Stream network bytes directly to file
-		outFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			resp.Body.Close()
+		bodyBytes, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil || len(bodyBytes) == 0 {
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
 
-		written, err := io.Copy(outFile, resp.Body)
-		resp.Body.Close()
-		_ = outFile.Close()
+		if task.EncryptionKey != "" {
+			bodyBytes = ApplyMangaPlusXORDecryption(bodyBytes, task.EncryptionKey)
+		}
 
-		if err == nil && written > 0 {
+		err = os.WriteFile(filePath, bodyBytes, 0644)
+		if err == nil && len(bodyBytes) > 0 {
 			return true
 		}
 
@@ -300,9 +299,10 @@ func DownloadEpisodesWithGranularProgress(
 				}
 
 				ep := selected[chIdx]
-				imageURLs, hasBanner, err := extractImageURLs(ep.URL)
+				imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL)
 				if err == nil && len(imageURLs) > 0 {
 					scannedChapters[chIdx].ImageURLs = imageURLs
+					scannedChapters[chIdx].EncryptionKeys = keys
 					scannedChapters[chIdx].HasBanner = hasBanner
 					atomic.AddInt32(&totalImages, int32(len(imageURLs)))
 				}
@@ -356,9 +356,14 @@ func DownloadEpisodesWithGranularProgress(
 			if scan.HasBanner {
 				taskIdx = i
 			}
+			encKey := ""
+			if i < len(scan.EncryptionKeys) {
+				encKey = scan.EncryptionKeys[i]
+			}
 			allTasks <- imageTask{
 				Index:              taskIdx,
 				URL:                imgURL,
+				EncryptionKey:      encKey,
 				Viewer:             scan.Episode.URL,
 				Dir:                scan.ChapterDir,
 				Ext:                ext,
@@ -562,7 +567,7 @@ func DownloadEpisodes(info *WebtoonInfo, selected []Episode, cfg DownloadConfig,
 		chapterDir := filepath.Join(targetBase, folderName)
 		_ = os.MkdirAll(chapterDir, 0755)
 
-		imageURLs, hasBanner, err := extractImageURLs(ep.URL)
+		imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL)
 		if err != nil || len(imageURLs) == 0 {
 			continue
 		}
@@ -603,13 +608,18 @@ func DownloadEpisodes(info *WebtoonInfo, selected []Episode, cfg DownloadConfig,
 			if hasBanner {
 				taskIdx = idx
 			}
+			encKey := ""
+			if idx < len(keys) {
+				encKey = keys[idx]
+			}
 			taskChan <- imageTask{
-				Index:  taskIdx,
-				URL:    imgURL,
-				Viewer: ep.URL,
-				Dir:    chapterDir,
-				Ext:    ext,
-				Format: imgFormat,
+				Index:         taskIdx,
+				URL:           imgURL,
+				EncryptionKey: encKey,
+				Viewer:        ep.URL,
+				Dir:           chapterDir,
+				Ext:           ext,
+				Format:        imgFormat,
 			}
 		}
 		close(taskChan)

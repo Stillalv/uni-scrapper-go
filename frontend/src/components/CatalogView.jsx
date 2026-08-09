@@ -5,6 +5,8 @@ export default function CatalogView({
   catalog,
   loadingCatalog,
   selectedLang,
+  selectedSource = 'webtoon',
+  onChangeSource,
   onChangeLang,
   onReloadCatalog,
   selectedComic,
@@ -33,29 +35,37 @@ export default function CatalogView({
             <BookOpen className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">LINE Webtoon Comic Catalog</h2>
+            <h2 className="text-lg font-bold tracking-tight">Comic Catalog ({selectedSource === 'mangaplus_id' ? 'MANGA Plus Indonesia' : 'LINE Webtoon'})</h2>
             <p className="text-xs opacity-60 mt-0.5">Browse and pick your favorite comics ({catalog.length} comics registered).</p>
           </div>
         </div>
 
-        {/* Language Tabs & View Mode */}
+        {/* Language & Source Tabs */}
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)] text-xs">
             <button
-              onClick={() => onChangeLang('id')}
+              onClick={() => onChangeSource ? onChangeSource('webtoon', 'id') : onChangeLang('id')}
               className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
-                selectedLang === 'id' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+                selectedSource === 'webtoon' && selectedLang === 'id' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
               }`}
             >
-              🇮🇩 Indonesia
+              🇮🇩 Webtoon (ID)
             </button>
             <button
-              onClick={() => onChangeLang('en')}
+              onClick={() => onChangeSource ? onChangeSource('mangaplus_id', 'id') : null}
               className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
-                selectedLang === 'en' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+                selectedSource === 'mangaplus_id' ? 'bg-red-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
               }`}
             >
-              🇬🇧 English
+              🔴 MANGA Plus (ID)
+            </button>
+            <button
+              onClick={() => onChangeSource ? onChangeSource('webtoon', 'en') : onChangeLang('en')}
+              className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
+                selectedSource === 'webtoon' && selectedLang === 'en' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+              }`}
+            >
+              🇬🇧 Webtoon (EN)
             </button>
           </div>
 

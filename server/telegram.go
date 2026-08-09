@@ -772,7 +772,7 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 	}
 	b.mu.Unlock()
 
-	info, err := engine.ResolveWebtoonInfo(input, lang, nil)
+	info, _, err := engine.ResolveWebtoonInfo(input, lang, nil)
 	if err != nil {
 		// Only fallback to title search if input is NOT pure digits
 		if !isDigit(input) {
@@ -781,7 +781,7 @@ func (b *TelegramBot) resolveWebtoon(chatID int64, input string) {
 				matches := filteredCatalog(catalog, input)
 				if len(matches) == 1 {
 					b.replyNew(chatID, fmt.Sprintf("🔎 Found comic: %s\n⏳ Loading episode data...", matches[0].Title), nil)
-					info, err = engine.ResolveWebtoonInfo(matches[0].URL, lang, nil)
+					info, _, err = engine.ResolveWebtoonInfo(matches[0].URL, lang, nil)
 				} else if len(matches) > 1 {
 					b.setState(chatID, func(s *botChatState) {
 						s.catalogList = matches
@@ -864,7 +864,7 @@ func filteredCatalog(catalog []engine.Comic, filter string) []engine.Comic {
 	for _, c := range catalog {
 		if strings.Contains(strings.ToLower(c.Title), f) ||
 			strings.Contains(strings.ToLower(c.Genre), f) ||
-			strings.Contains(c.TitleNo, f) {
+			strings.Contains(c.ID, f) {
 			out = append(out, c)
 		}
 	}
@@ -936,7 +936,7 @@ func (b *TelegramBot) sendCatalogPage(chatID int64) {
 		sb.WriteString(fmt.Sprintf("📚 Webtoon Catalog (%d–%d of %d)\n\n", start+1, end, len(list)))
 	}
 	for i, c := range list[start:end] {
-		sb.WriteString(fmt.Sprintf("%d. %s (#'%s', %s)\n", start+i+1, c.Title, c.TitleNo, c.Genre))
+		sb.WriteString(fmt.Sprintf("%d. %s (#'%s', %s)\n", start+i+1, c.Title, c.ID, c.Genre))
 	}
 	sb.WriteString("\nReply with a number to select a comic, or type a keyword to search.")
 

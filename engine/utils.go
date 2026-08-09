@@ -6,13 +6,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"uni-scraper-go/engine/utils"
 )
 
 // SanitizeFilename removes invalid characters for Windows file/folder names.
 func SanitizeFilename(filename string) string {
-	re := regexp.MustCompile(`[\\/*?:"<>|]`)
-	cleaned := re.ReplaceAllString(filename, "")
-	return strings.TrimSpace(cleaned)
+	return utils.SanitizeFilename(filename)
 }
 
 // IsMatchingFormat checks magic bytes to determine if content matches target format directly.
@@ -45,7 +45,6 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]Episode) []Ep
 		return selected
 	}
 
-	// Check for range: e.g. "1-10" or "200-"
 	rangeRegex := regexp.MustCompile(`^(\d+)-(\d*)$`)
 	rangeMatches := rangeRegex.FindStringSubmatch(selectionStr)
 	if len(rangeMatches) > 1 {
@@ -54,7 +53,6 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]Episode) []Ep
 		if rangeMatches[2] != "" {
 			end, _ = strconv.Atoi(rangeMatches[2])
 		} else {
-			// Find max episode
 			maxEp := 0
 			for epNo := range episodeMap {
 				if epNo > maxEp {
@@ -77,7 +75,6 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]Episode) []Ep
 		return selected
 	}
 
-	// Check for comma-separated values: e.g. "1,3,5" or single "10"
 	parts := strings.Split(selectionStr, ",")
 	for _, part := range parts {
 		part = strings.TrimSpace(part)
@@ -91,7 +88,7 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]Episode) []Ep
 	return selected
 }
 
-// FormatFloatEp formats episode float numbers into padded string (e.g. 1 -> 001, 1.5 -> 001.5)
+// FormatFloatEp formats episode float numbers into padded string.
 func FormatFloatEp(val float64) string {
 	if val == float64(int64(val)) {
 		return fmt.Sprintf("%03d", int64(val))

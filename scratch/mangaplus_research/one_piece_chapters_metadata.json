@@ -1,0 +1,59 @@
+{
+  "title_id": 100140,
+  "title_name": "One Piece",
+  "author": "Eiichiro Oda",
+  "language": "Bahasa Indonesia / Sub Indo",
+  "total_chapters": 8,
+  "fetched_at": "2026-08-08 16:54:21 CST",
+  "chapters": [
+    {
+      "chapter_id": 100140,
+      "chapter_number": "ID-100140",
+      "title": "One Piece",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/title_thumbnail_portrait_list/326451.jpg?hash=nYvWfNjfa4kw58G27Ip4zQ\u0026expires=2145884400",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/100140"
+    },
+    {
+      "chapter_id": 100020,
+      "chapter_number": "ID-100020",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/100020"
+    },
+    {
+      "chapter_id": 100079,
+      "chapter_number": "ID-100079",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/100079"
+    },
+    {
+      "chapter_id": 100149,
+      "chapter_number": "ID-100149",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/100149"
+    },
+    {
+      "chapter_id": 200016,
+      "chapter_number": "ID-200016",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/200016"
+    },
+    {
+      "chapter_id": 700005,
+      "chapter_number": "ID-700005",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/700005"
+    },
+    {
+      "chapter_id": 800001,
+      "chapter_number": "ID-800001",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/800001"
+    },
+    {
+      "chapter_id": 1000001,
+      "chapter_number": "ID-1000001",
+      "title": "",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/1000001"
+    }
+  ]
+}

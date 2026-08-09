@@ -1,0 +1,66 @@
+{
+  "title_id": 100140,
+  "title_name": "One Piece",
+  "author": "Eiichiro Oda",
+  "language": "Bahasa Indonesia (Sub Indo)",
+  "total_chapters": 8,
+  "fetched_at": "2026-08-08 16:54:46 CST",
+  "chapters": [
+    {
+      "chapter_id": 1008831,
+      "chapter_name": "Bab 1",
+      "subtitle": "One Piece - Episode 1",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/1008831/chapter_thumbnail/150310.jpg?hash=hp_KNT2WtmyZSrPLYBbU7Q\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/1008831"
+    },
+    {
+      "chapter_id": 1008832,
+      "chapter_name": "Bab 2",
+      "subtitle": "One Piece - Episode 2",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/1008832/chapter_thumbnail/150313.jpg?hash=0h4s4hXUYjrEJGCFvf5Y6Q\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/1008832"
+    },
+    {
+      "chapter_id": 1008833,
+      "chapter_name": "Bab 3",
+      "subtitle": "One Piece - Episode 3",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/1008833/chapter_thumbnail/150316.jpg?hash=wlnwEVMlDFqt6Zxu7ANE-w\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/1008833"
+    },
+    {
+      "chapter_id": 4000720,
+      "chapter_name": "Bab 4",
+      "subtitle": "One Piece - Episode 4",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/4000720/chapter_thumbnail/403695.jpg?hash=TA2_2SWvheisiQV0xZQIXA\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/4000720"
+    },
+    {
+      "chapter_id": 4002544,
+      "chapter_name": "Bab 5",
+      "subtitle": "One Piece - Episode 5",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/4002544/chapter_thumbnail/488153.jpg?hash=5T1gmahq9Jl0bc_0S8vb8g\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/4002544"
+    },
+    {
+      "chapter_id": 4002545,
+      "chapter_name": "Bab 6",
+      "subtitle": "One Piece - Episode 6",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/4002545/chapter_thumbnail/488711.jpg?hash=kizpdIs3rpidyL9dYpShJQ\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/4002545"
+    },
+    {
+      "chapter_id": 4002571,
+      "chapter_name": "Bab 7",
+      "subtitle": "One Piece - Episode 7",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/4002571/chapter_thumbnail/489152.jpg?hash=37mZ5n00C-zgTBlZBzJXcw\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/4002571"
+    },
+    {
+      "chapter_id": 4002572,
+      "chapter_name": "Bab 8",
+      "subtitle": "One Piece - Episode 8",
+      "thumbnail_url": "https://jumpg-assets.tokyo-cdn.com/secure/title/100140/chapter/4002572/chapter_thumbnail/609731.jpg?hash=Zdqt_P8pRQT-TlZeUVrj2g\u0026expires=17861832000",
+      "viewer_url": "https://mangaplus.shueisha.co.jp/viewer/4002572"
+    }
+  ]
+}

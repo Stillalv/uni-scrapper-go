@@ -17,6 +17,7 @@ export default function App() {
   const [catalog, setCatalog] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [selectedLang, setSelectedLang] = useState('id');
+  const [selectedSource, setSelectedSource] = useState('webtoon');
   const [selectedComic, setSelectedComic] = useState(null);
   
   const [comicUrl, setComicUrl] = useState('');
@@ -97,14 +98,15 @@ export default function App() {
   };
 
   // Fetch initial catalog
-  const loadCatalog = async (lang = selectedLang, forceRefresh = false) => {
+  const loadCatalog = async (lang = selectedLang, source = selectedSource, forceRefresh = false) => {
     setLoadingCatalog(true);
     try {
-      const res = await fetch(`/api/catalog?lang=${lang}&refresh=${forceRefresh}`);
+      const res = await fetch(`/api/catalog?lang=${lang}&source=${source}&refresh=${forceRefresh}`);
       const data = await res.json();
       if (data.status === 'success') {
         setCatalog(data.catalog || []);
-        addToast('Catalog Ready', `Successfully loaded ${data.catalog.length} Webtoon comics.`, 'success');
+        const sourceLabel = source === 'mangaplus_id' ? 'MANGA Plus (Indonesia)' : 'Webtoon';
+        addToast('Catalog Ready', `Successfully loaded ${data.catalog.length} ${sourceLabel} comics.`, 'success');
       } else {
         addToast('Catalog Failed', data.message || 'Failed to load comic catalog.', 'error');
       }
@@ -116,7 +118,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadCatalog('id', false);
+    loadCatalog('id', 'webtoon', false);
   }, []);
 
   // Load Telegram bot config on mount
@@ -355,11 +357,17 @@ export default function App() {
               catalog={catalog}
               loadingCatalog={loadingCatalog}
               selectedLang={selectedLang}
+              selectedSource={selectedSource}
+              onChangeSource={(source, lang) => {
+                setSelectedSource(source);
+                setSelectedLang(lang);
+                loadCatalog(lang, source, false);
+              }}
               onChangeLang={(lang) => {
                 setSelectedLang(lang);
-                loadCatalog(lang, false);
+                loadCatalog(lang, selectedSource, false);
               }}
-              onReloadCatalog={(refresh) => loadCatalog(selectedLang, refresh)}
+              onReloadCatalog={(refresh) => loadCatalog(selectedLang, selectedSource, refresh)}
               selectedComic={selectedComic}
               onSelectComic={handleSelectComic}
               onNavigateScraper={() => setActiveTab('scraper')}

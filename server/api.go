@@ -137,10 +137,19 @@ func HandleCatalog(w http.ResponseWriter, r *http.Request) {
 	if lang == "" {
 		lang = "id"
 	}
+	source := r.URL.Query().Get("source")
 	refreshStr := r.URL.Query().Get("refresh")
 	forceRefresh := refreshStr == "true"
 
-	catalog, err := engine.FetchWebtoonCatalog(lang, forceRefresh, nil)
+	var catalog []engine.Comic
+	var err error
+
+	if source == "mangaplus_id" || source == "mangaplus" {
+		catalog, err = engine.FetchMangaPlusCatalog(forceRefresh, nil)
+	} else {
+		catalog, err = engine.FetchWebtoonCatalog(lang, forceRefresh, nil)
+	}
+
 	if err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
@@ -161,7 +170,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.URL == "" {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": "Invalid Webtoon URL / ID.",
+			"message": "Invalid Webtoon / MANGA Plus URL or ID.",
 		})
 		return
 	}
@@ -170,20 +179,20 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 		req.Lang = "id"
 	}
 
-	info, err := engine.ResolveWebtoonInfo(req.URL, req.Lang, nil)
-	if err != nil {
-		json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":  "error",
-			"message": fmt.Sprintf("Failed to process Webtoon: %v", err),
-		})
-		return
+	var info *engine.WebtoonInfo
+	var episodes []engine.Episode
+	var err error
+
+	if engine.IsMangaPlusInput(req.URL) {
+		info, episodes, err = engine.ResolveMangaPlusInfo(req.URL, nil)
+	} else {
+		info, episodes, err = engine.ResolveWebtoonInfo(req.URL, req.Lang, nil)
 	}
 
-	episodes, err := engine.GetAllEpisodes(info.ListURL, nil)
 	if err != nil || len(episodes) == 0 {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
-			"message": "Failed to load episode list.",
+			"message": fmt.Sprintf("Failed to process comic: %v", err),
 		})
 		return
 	}
