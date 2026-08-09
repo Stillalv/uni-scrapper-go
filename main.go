@@ -146,6 +146,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/catalog", server.HandleCatalog)
+	mux.HandleFunc("/api/proxy-image", server.HandleProxyImage)
 	mux.HandleFunc("/api/check", server.HandleCheckInfo)
 	mux.HandleFunc("/api/config", server.HandleGetConfig)
 	mux.HandleFunc("/api/open-folder", server.HandleOpenFolder)

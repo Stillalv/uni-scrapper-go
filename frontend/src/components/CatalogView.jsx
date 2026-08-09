@@ -146,10 +146,9 @@ export default function CatalogView({
                   <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-black/30 mb-2 group/cover border border-white/5">
                     {comic.cover_url ? (
                       <img
-                        src={comic.cover_url}
+                        src={`/api/proxy-image?url=${encodeURIComponent(comic.cover_url)}`}
                         alt={comic.title}
                         loading="lazy"
-                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover group-hover/cover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           e.target.onerror = null;
@@ -210,10 +209,9 @@ export default function CatalogView({
                   <div className="w-9 h-12 rounded-md overflow-hidden bg-black/30 shrink-0 border border-white/10 relative">
                     {comic.cover_url ? (
                       <img
-                        src={comic.cover_url}
+                        src={`/api/proxy-image?url=${encodeURIComponent(comic.cover_url)}`}
                         alt={comic.title}
                         loading="lazy"
-                        referrerPolicy="no-referrer"
                         className="w-full h-full object-cover"
                         onError={(e) => { e.target.style.display = 'none'; }}
                       />

@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
@@ -516,4 +517,42 @@ func HandleBenchmark(w http.ResponseWriter, r *http.Request) {
 		"status": "success",
 		"data":   result,
 	})
+}
+
+func HandleProxyImage(w http.ResponseWriter, r *http.Request) {
+	imgURL := r.URL.Query().Get("url")
+	if imgURL == "" {
+		http.Error(w, "Missing url parameter", http.StatusBadRequest)
+		return
+	}
+
+	req, err := http.NewRequest("GET", imgURL, nil)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if strings.Contains(imgURL, "tokyo-cdn.com") {
+		req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
+		req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+	} else {
+		req.Header.Set("Referer", "https://www.webtoons.com/")
+	}
+	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+
+	resp, err := utils.HTTPClient.Do(req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		http.Error(w, fmt.Sprintf("Upstream returned %d", resp.StatusCode), resp.StatusCode)
+		return
+	}
+
+	w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = io.Copy(w, resp.Body)
 }
