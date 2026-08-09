@@ -126,36 +126,63 @@ export default function CatalogView({
       ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredCatalog.map((comic) => {
-            const isSelected = selectedComic && selectedComic.title_no === comic.title_no;
+            const comicID = comic.id || comic.title_no;
+            const isSelected = selectedComic && (selectedComic.id === comicID || selectedComic.title_no === comicID);
             return (
               <div
-                key={comic.title_no}
+                key={comicID}
                 onClick={() => {
                   onSelectComic(comic);
                   onNavigateScraper();
                 }}
-                className={`p-4 rounded-2xl glass-card border transition-all cursor-pointer space-y-3 group hover:scale-[1.01] hover:shadow-md ${
+                className={`p-3 rounded-2xl glass-card border transition-all cursor-pointer flex flex-col justify-between group hover:scale-[1.01] hover:shadow-xl ${
                   isSelected
                     ? 'border-blue-600 bg-blue-600/10 shadow-md'
                     : 'border-[var(--border-color)] hover:border-blue-500/40'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider border border-blue-500/20">
-                    {comic.genre || 'DRAMA'}
-                  </span>
-                  <span className="text-[10px] font-mono opacity-40 font-semibold">
-                    #{comic.title_no}
-                  </span>
-                </div>
-
                 <div>
-                  <h3 className="text-sm font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {comic.title}
-                  </h3>
+                  {/* Poster Cover Container */}
+                  <div className="relative w-full aspect-[3/4] rounded-xl overflow-hidden bg-black/20 mb-3 group/cover border border-white/5">
+                    {comic.cover_url ? (
+                      <img
+                        src={comic.cover_url}
+                        alt={comic.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover/cover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-3 text-center opacity-40">
+                        <BookOpen className="w-8 h-8 mb-2" />
+                        <span className="text-[10px] uppercase tracking-wider font-semibold">{comic.genre || 'Webtoon'}</span>
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90" />
+                    
+                    <div className="absolute top-2 left-2 right-2 flex items-center justify-between pointer-events-none">
+                      <span className="text-[9px] px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white/90 font-semibold uppercase tracking-wider border border-white/10">
+                        {comic.genre || 'DRAMA'}
+                      </span>
+                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white/80 font-semibold border border-white/10">
+                        #{comicID}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {comic.title}
+                    </h3>
+                    {comic.author && (
+                      <p className="text-[11px] opacity-60 truncate mt-0.5">{comic.author}</p>
+                    )}
+                  </div>
                 </div>
 
-                <div className="pt-2.5 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-1 transition-transform">
+                <div className="pt-2.5 mt-3 border-t border-[var(--border-color)] flex items-center justify-between text-xs text-blue-600 dark:text-blue-400 font-semibold group-hover:translate-x-1 transition-transform">
                   <span>Select This Comic</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </div>
@@ -166,29 +193,47 @@ export default function CatalogView({
       ) : (
         <div className="space-y-2">
           {filteredCatalog.map((comic) => {
-            const isSelected = selectedComic && selectedComic.title_no === comic.title_no;
+            const comicID = comic.id || comic.title_no;
+            const isSelected = selectedComic && (selectedComic.id === comicID || selectedComic.title_no === comicID);
             return (
               <div
-                key={comic.title_no}
+                key={comicID}
                 onClick={() => {
                   onSelectComic(comic);
                   onNavigateScraper();
                 }}
-                className={`px-4 py-3 rounded-xl glass-card border transition-all cursor-pointer flex items-center justify-between group hover:border-blue-500/40 ${
+                className={`px-4 py-2.5 rounded-xl glass-card border transition-all cursor-pointer flex items-center justify-between group hover:border-blue-500/40 ${
                   isSelected ? 'border-blue-600 bg-blue-600/10' : 'border-[var(--border-color)]'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold font-mono">
-                    #{comic.title_no}
-                  </span>
+                  <div className="w-10 h-14 rounded-lg overflow-hidden bg-black/20 shrink-0 border border-white/10 relative">
+                    {comic.cover_url ? (
+                      <img
+                        src={comic.cover_url}
+                        alt={comic.title}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        onError={(e) => { e.target.style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center opacity-30 text-[9px] font-mono">
+                        #{comicID}
+                      </div>
+                    )}
+                  </div>
                   <div className="min-w-0">
-                    <h3 className="text-xs font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold font-mono">
+                        #{comicID}
+                      </span>
+                      <span className="text-[9px] opacity-50 uppercase tracking-wider font-semibold">
+                        {comic.genre || 'DRAMA'}
+                      </span>
+                    </div>
+                    <h3 className="text-xs font-semibold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-0.5">
                       {comic.title}
                     </h3>
-                    <span className="text-[9px] opacity-50 uppercase tracking-wider">
-                      {comic.genre || 'DRAMA'}
-                    </span>
                   </div>
                 </div>
 

@@ -166,6 +166,12 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 					title = spaceRe.ReplaceAllString(titleRaw, " ")
 				}
 
+				imgTag := s.Find("img")
+				imgSrc, _ := imgTag.Attr("src")
+				if imgSrc == "" {
+					imgSrc, _ = imgTag.Attr("data-url")
+				}
+
 				relURL, _ := url.Parse(href)
 				fullURL := baseURL.ResolveReference(relURL).String()
 
@@ -176,6 +182,7 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 						Source:      p.sourceID,
 						Title:       title,
 						Genre:       genre,
+						CoverURL:    imgSrc,
 						URL:         fullURL,
 						IsCompleted: isCompleted,
 					}
