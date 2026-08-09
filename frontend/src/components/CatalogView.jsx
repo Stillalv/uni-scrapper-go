@@ -16,13 +16,18 @@ export default function CatalogView({
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
-  const filteredCatalog = catalog.filter((c) => {
+  const filteredCatalog = (catalog || []).filter((c) => {
     const q = searchQuery.toLowerCase().trim();
     if (!q) return true;
+    const comicID = String(c.id || c.title_no || '');
+    const title = String(c.title || '').toLowerCase();
+    const genre = String(c.genre || '').toLowerCase();
+    const author = String(c.author || '').toLowerCase();
     return (
-      c.title.toLowerCase().includes(q) ||
-      c.title_no.includes(q) ||
-      (c.genre && c.genre.toLowerCase().includes(q))
+      title.includes(q) ||
+      comicID.includes(q) ||
+      genre.includes(q) ||
+      author.includes(q)
     );
   });
 

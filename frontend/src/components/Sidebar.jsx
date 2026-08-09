@@ -95,7 +95,7 @@ export default function Sidebar({
             <CheckCircle className="w-3 h-3" />
           </div>
           <div className="text-xs font-semibold truncate">{selectedComic.title}</div>
-          <div className="text-[9px] opacity-40 font-mono">ID: #{selectedComic.title_no}</div>
+          <div className="text-[9px] opacity-40 font-mono">ID: #{selectedComic.id || selectedComic.title_no}</div>
         </div>
       )}
 
