@@ -142,12 +142,12 @@ export default function CatalogView({
                 }}
                 className={`p-2 rounded-xl glass-card border transition-all cursor-pointer flex flex-col justify-between group hover:scale-[1.02] hover:shadow-xl ${
                   isSelected
-                    ? 'border-blue-600 bg-blue-600/10 shadow-md'
+                    ? 'border-blue-600 bg-blue-600/10 shadow-md ring-1 ring-blue-500/50'
                     : 'border-[var(--border-color)] hover:border-blue-500/40'
                 }`}
               >
                 <div>
-                  {/* Compact Poster Cover Container */}
+                  {/* Poster Cover Container */}
                   <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-black/30 mb-2 group/cover border border-white/5">
                     {comic.cover_url ? (
                       <img
@@ -160,28 +160,30 @@ export default function CatalogView({
                           e.target.style.display = 'none';
                         }}
                       />
-                    ) : null}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-90" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center opacity-40">
+                        <BookOpen className="w-6 h-6 mb-1" />
+                        <span className="text-[9px] uppercase tracking-wider font-semibold">{comic.genre || 'Webtoon'}</span>
+                      </div>
+                    )}
                     
                     <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-none">
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/90 font-semibold uppercase tracking-wider border border-white/10 truncate max-w-[70%]">
+                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md text-white font-semibold uppercase tracking-wider border border-white/10 truncate max-w-[70%]">
                         {comic.genre || 'DRAMA'}
                       </span>
-                      <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-black/70 backdrop-blur-md text-white/80 font-semibold border border-white/10">
+                      <span className="text-[8px] font-mono px-1 py-0.5 rounded bg-black/75 backdrop-blur-md text-white/80 font-semibold border border-white/10">
                         #{comicID}
                       </span>
                     </div>
-
-                    <div className="absolute bottom-1.5 left-1.5 right-1.5 pointer-events-none">
-                      <h4 className="text-xs font-bold text-white drop-shadow-md line-clamp-2 leading-tight">
-                        {comic.title}
-                      </h4>
-                    </div>
                   </div>
 
-                  <div>
+                  {/* Title & Author below poster */}
+                  <div className="px-0.5">
+                    <h3 className="text-xs font-bold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight" title={comic.title}>
+                      {comic.title}
+                    </h3>
                     {comic.author && (
-                      <p className="text-[10px] opacity-60 truncate px-0.5">{comic.author}</p>
+                      <p className="text-[10px] opacity-60 truncate mt-0.5">{comic.author}</p>
                     )}
                   </div>
                 </div>
