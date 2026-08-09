@@ -74,10 +74,12 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 								result[i].ID = item.TitleNo
 							}
 						}
-						if logCb != nil {
-							logCb(fmt.Sprintf("Done! Found %d comics from cache.", len(result)))
+						if len(result) > 0 && result[0].CoverURL != "" {
+							if logCb != nil {
+								logCb(fmt.Sprintf("Done! Found %d comics from cache.", len(result)))
+							}
+							return result, nil
 						}
-						return result, nil
 					}
 				}
 			}
