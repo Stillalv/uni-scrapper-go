@@ -136,6 +136,9 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 
 func downloadSingleImage(task model.ImageTask, filePath string, cfg model.DownloadConfig) bool {
 	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(50 * time.Millisecond)
+		}
 		req, err := http.NewRequest("GET", task.URL, nil)
 		if err != nil {
 			return false
@@ -152,20 +155,17 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 
 		resp, err := utils.HTTPClient.Do(req)
 		if err != nil {
-			time.Sleep(50 * time.Millisecond)
 			continue
 		}
 
 		if resp.StatusCode != 200 {
 			resp.Body.Close()
-			time.Sleep(50 * time.Millisecond)
 			continue
 		}
 
 		bodyBytes, err := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if err != nil || len(bodyBytes) == 0 {
-			time.Sleep(50 * time.Millisecond)
 			continue
 		}
 
@@ -179,7 +179,6 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 		}
 
 		_ = os.Remove(filePath)
-		time.Sleep(50 * time.Millisecond)
 	}
 	return false
 }
@@ -251,7 +250,7 @@ func DownloadEpisodesWithGranularProgress(
 		go func() {
 			defer scanWg.Done()
 			for chIdx := range scanChan {
-				if atomic.LoadInt32(cfg.StopRequested) == 1 {
+				if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
 					return
 				}
 
@@ -281,7 +280,7 @@ func DownloadEpisodesWithGranularProgress(
 	}
 	scanWg.Wait()
 
-	if atomic.LoadInt32(cfg.StopRequested) == 1 {
+	if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
 		return 0, totalCh, 0
 	}
 
@@ -350,7 +349,7 @@ func DownloadEpisodesWithGranularProgress(
 			}()
 
 			for task := range allTasks {
-				if atomic.LoadInt32(cfg.StopRequested) == 1 {
+				if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
 					if atomic.LoadInt32(&drainChapter) == -1 {
 						atomic.CompareAndSwapInt32(&drainChapter, -1, atomic.LoadInt32(&latestDoneChapter))
 					}
@@ -438,7 +437,7 @@ func DownloadEpisodesWithGranularProgress(
 
 	wg.Wait()
 
-	if progressCb != nil && atomic.LoadInt32(cfg.StopRequested) == 0 {
+	if progressCb != nil && (cfg.StopRequested == nil || atomic.LoadInt32(cfg.StopRequested) == 0) {
 		workerMu.Lock()
 		for i := 0; i < cfg.MaxWorkers; i++ {
 			workerList[i] = model.WorkerStatus{ID: i + 1, ImageFile: "-", Status: "Idle", Active: false}

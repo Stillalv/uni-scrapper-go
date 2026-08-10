@@ -14,6 +14,7 @@ var HTTPClient = &http.Client{
 			Timeout:   10 * time.Second,
 			KeepAlive: 60 * time.Second,
 		}).DialContext,
+		ForceAttemptHTTP2:   true,
 		MaxIdleConns:        300,
 		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     90 * time.Second,
