@@ -140,14 +140,17 @@ func parseMangaPlusEpisodesFromProto(data []byte, titleID string) []model.Episod
 	return episodes
 }
 
-// FetchChapterPages fetches all panel image URLs and encryption keys for a MANGA Plus chapter.
-func FetchChapterPages(chapterID string) ([]string, []string, error) {
+// FetchChapterPagesWithQuality fetches panel image URLs for a given quality level (e.g., "super_high", "high", "low").
+func FetchChapterPagesWithQuality(chapterID string, quality string) ([]string, []string, error) {
+	if quality == "" {
+		quality = "super_high"
+	}
 	secret, err := GetDeviceSecret()
 	if err != nil {
 		secret = "a2a9960bd0060a6eba81ebb25ad5b13c"
 	}
 
-	url := fmt.Sprintf("https://jumpg-api.tokyo-cdn.com/api/manga_viewer?chapter_id=%s&os=android&os_ver=33&app_ver=240&secret=%s&split=yes&img_quality=super_high", chapterID, secret)
+	url := fmt.Sprintf("https://jumpg-api.tokyo-cdn.com/api/manga_viewer?chapter_id=%s&os=android&os_ver=33&app_ver=240&secret=%s&split=yes&img_quality=%s", chapterID, quality, secret)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, nil, err
@@ -185,6 +188,11 @@ func FetchChapterPages(chapterID string) ([]string, []string, error) {
 	}
 
 	return imageURLs, keys, nil
+}
+
+// FetchChapterPages fetches all panel image URLs and encryption keys for a MANGA Plus chapter in super_high quality.
+func FetchChapterPages(chapterID string) ([]string, []string, error) {
+	return FetchChapterPagesWithQuality(chapterID, "super_high")
 }
 
 type PageMeta struct {

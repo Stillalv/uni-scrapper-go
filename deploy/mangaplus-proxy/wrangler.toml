@@ -1,0 +1,7 @@
+name = "mangaplus-proxy"
+main = "worker.js"
+compatibility_date = "2026-08-10"
+
+routes = [
+  { pattern = "mangaplus.unimains.my.id", custom_domain = true }
+]
