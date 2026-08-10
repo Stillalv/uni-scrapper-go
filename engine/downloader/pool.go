@@ -189,7 +189,7 @@ func DownloadEpisodesWithGranularProgress(
 	selected []model.Episode,
 	cfg model.DownloadConfig,
 	progressCb func(map[string]interface{}),
-) (int, int) {
+) (int, int, int) {
 	imgFormat := strings.ToUpper(cfg.Format)
 	ext := ".webp"
 	if imgFormat == "JPEG" || imgFormat == "JPG" {
@@ -282,7 +282,7 @@ func DownloadEpisodesWithGranularProgress(
 	scanWg.Wait()
 
 	if atomic.LoadInt32(cfg.StopRequested) == 1 {
-		return 0, totalCh
+		return 0, totalCh, 0
 	}
 
 	finalTotalImages := int(atomic.LoadInt32(&totalImages))
@@ -462,7 +462,7 @@ func DownloadEpisodesWithGranularProgress(
 		})
 	}
 
-	return int(successCh), totalCh
+	return int(successCh), totalCh, int(totalDownloaded)
 }
 
 func RunActualWorkerBenchmark(workers int) map[string]interface{} {

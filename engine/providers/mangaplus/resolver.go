@@ -80,6 +80,11 @@ func (p *MangaPlusProvider) ResolveComic(rawInput string, logCb func(string)) (*
 		ListURL: fmt.Sprintf("https://mangaplus.shueisha.co.jp/titles/%s", titleID),
 	}
 
+	rePortrait := regexp.MustCompile(`https?://jumpg-assets[0-9]*\.tokyo-cdn\.com/secure/title/` + titleID + `/title_thumbnail_portrait_list/[^\s"']+\.jpg[^\s"']*`)
+	if m := rePortrait.FindString(string(body)); m != "" {
+		info.CoverURL = m
+	}
+
 	if logCb != nil {
 		logCb(fmt.Sprintf("Successfully resolved '%s' (%d chapters).", titleName, len(episodes)))
 	}

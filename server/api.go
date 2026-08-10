@@ -368,7 +368,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 			}
 		}
 
-		successCh, totalCh := downloader.DownloadEpisodesWithGranularProgress(
+		successCh, totalCh, totalImgs := downloader.DownloadEpisodesWithGranularProgress(
 			info,
 			selectedEps,
 			cfg,
@@ -385,6 +385,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				"comicTitle":     info.Title,
 				"completedCount": successCh,
 				"totalCount":     totalCh,
+				"totalImages":    totalImgs,
 				"format":         cfg.Format,
 				"workers":        cfg.MaxWorkers,
 				"outputDir":      cfg.OutputDir,
@@ -392,7 +393,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				"genre":          info.Genre,
 				"elapsedMs":      elapsedMs,
 				"elapsedSec":     elapsedSec,
-				"message":        fmt.Sprintf("Download stopped. Finished %d of %d chapters in %.1fs.", successCh, totalCh, elapsedSec),
+				"message":        fmt.Sprintf("Download stopped. Finished %d of %d chapters (%d images) in %.1fs.", successCh, totalCh, totalImgs, elapsedSec),
 				"type":           "warning",
 			}
 			Broadcaster.Broadcast("DOWNLOAD_STOPPED", data)
@@ -405,6 +406,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				"title":          info.Title,
 				"completedCount": successCh,
 				"totalCount":     totalCh,
+				"totalImages":    totalImgs,
 				"format":         cfg.Format,
 				"workers":        cfg.MaxWorkers,
 				"outputDir":      cfg.OutputDir,
@@ -412,7 +414,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				"genre":          info.Genre,
 				"elapsedMs":      elapsedMs,
 				"elapsedSec":     elapsedSec,
-				"message":        fmt.Sprintf("Download complete! %d of %d chapters downloaded in %.1fs.", successCh, totalCh, elapsedSec),
+				"message":        fmt.Sprintf("Download complete! %d of %d chapters (%d images) downloaded in %.1fs.", successCh, totalCh, totalImgs, elapsedSec),
 			}
 			Broadcaster.Broadcast("DOWNLOAD_FINISHED", data)
 			if notify != nil {
