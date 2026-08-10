@@ -147,7 +147,13 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 	return info, episodes, nil
 }
 
-func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) ([]model.Episode, error) {
+type webtoonPageResult struct {
+	Episodes []model.Episode
+	MaxPage  int
+	HasNext  bool
+}
+
+func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) (webtoonPageResult, error) {
 	targetURL := listURL
 	if page > 1 {
 		if strings.Contains(listURL, "?") {
@@ -159,7 +165,7 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) ([]mode
 
 	req, err := http.NewRequest("GET", targetURL, nil)
 	if err != nil {
-		return nil, err
+		return webtoonPageResult{}, err
 	}
 	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
 	req.Header.Set("Referer", "https://www.webtoons.com/")
@@ -169,13 +175,13 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) ([]mode
 		if resp != nil {
 			resp.Body.Close()
 		}
-		return nil, fmt.Errorf("HTTP error for page %d", page)
+		return webtoonPageResult{}, fmt.Errorf("HTTP error for page %d", page)
 	}
 
 	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, err
+		return webtoonPageResult{}, err
 	}
 
 	episodeNoRe := regexp.MustCompile(`episode_no=(\d+)`)
@@ -212,7 +218,29 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) ([]mode
 		})
 	})
 
-	return pageEpisodes, nil
+	maxPage := page
+	pageRe := regexp.MustCompile(`page=(\d+)`)
+	doc.Find(".paginate a, .page_area a").Each(func(i int, s *goquery.Selection) {
+		if href, ok := s.Attr("href"); ok {
+			if m := pageRe.FindStringSubmatch(href); len(m) >= 2 {
+				if pNum, err := strconv.Atoi(m[1]); err == nil && pNum > maxPage {
+					maxPage = pNum
+				}
+			}
+		}
+		txt := strings.TrimSpace(s.Text())
+		if pNum, err := strconv.Atoi(txt); err == nil && pNum > maxPage {
+			maxPage = pNum
+		}
+	})
+
+	hasNext := doc.Find(".paginate a.pg_next, .paginate .pg_next, a.pg_next").Length() > 0
+
+	return webtoonPageResult{
+		Episodes: pageEpisodes,
+		MaxPage:  maxPage,
+		HasNext:  hasNext,
+	}, nil
 }
 
 func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode, error) {
@@ -221,61 +249,72 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	baseURL, _ := url.Parse(listURL)
 
 	// Fetch Page 1 first
-	p1Episodes, err := fetchWebtoonEpisodePage(listURL, 1, baseURL)
-	if err != nil || len(p1Episodes) == 0 {
+	p1Res, err := fetchWebtoonEpisodePage(listURL, 1, baseURL)
+	if err != nil || len(p1Res.Episodes) == 0 {
 		return nil, err
 	}
 
-	for _, ep := range p1Episodes {
+	for _, ep := range p1Res.Episodes {
 		epMap[ep.EpisodeNo] = ep
 	}
 
-	// Fetch subsequent pages in parallel batches of 10
-	batchSize := 10
-	currentStartPage := 2
+	knownMaxPage := p1Res.MaxPage
+	fetchedPages := make(map[int]bool)
+	fetchedPages[1] = true
 
 	for {
+		var pagesToFetch []int
+		for p := 2; p <= knownMaxPage; p++ {
+			if !fetchedPages[p] {
+				pagesToFetch = append(pagesToFetch, p)
+			}
+		}
+
+		if len(pagesToFetch) == 0 {
+			break
+		}
+
 		var wg sync.WaitGroup
-		hasEmptyPage := false
+		var batchMaxPage int = knownMaxPage
+		var batchHasNext bool = false
 		var batchMu sync.Mutex
 
-		for p := 0; p < batchSize; p++ {
-			pageNo := currentStartPage + p
+		for _, pageNo := range pagesToFetch {
+			fetchedPages[pageNo] = true
 			wg.Add(1)
 			go func(pNum int) {
 				defer wg.Done()
-				eps, err := fetchWebtoonEpisodePage(listURL, pNum, baseURL)
-				if err != nil || len(eps) == 0 {
-					batchMu.Lock()
-					hasEmptyPage = true
-					batchMu.Unlock()
+				res, err := fetchWebtoonEpisodePage(listURL, pNum, baseURL)
+				if err != nil || len(res.Episodes) == 0 {
 					return
 				}
 
 				mu.Lock()
-				newCount := 0
-				for _, ep := range eps {
+				for _, ep := range res.Episodes {
 					if _, exists := epMap[ep.EpisodeNo]; !exists {
 						epMap[ep.EpisodeNo] = ep
-						newCount++
 					}
 				}
 				mu.Unlock()
 
-				if newCount == 0 {
-					batchMu.Lock()
-					hasEmptyPage = true
-					batchMu.Unlock()
+				batchMu.Lock()
+				if res.MaxPage > batchMaxPage {
+					batchMaxPage = res.MaxPage
 				}
+				if res.HasNext {
+					batchHasNext = true
+				}
+				batchMu.Unlock()
 			}(pageNo)
 		}
 
 		wg.Wait()
 
-		if hasEmptyPage {
+		if batchMaxPage > knownMaxPage {
+			knownMaxPage = batchMaxPage
+		} else if !batchHasNext {
 			break
 		}
-		currentStartPage += batchSize
 	}
 
 	episodes := make([]model.Episode, 0, len(epMap))
