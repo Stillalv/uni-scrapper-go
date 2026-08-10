@@ -12,8 +12,14 @@ func XORDecrypt(data []byte, keyHex string) []byte {
 		return data
 	}
 	keyLen := len(keyBytes)
-	for i := 0; i < len(data); i++ {
-		data[i] ^= keyBytes[i%keyLen]
+	if keyLen == 16 {
+		for i := 0; i < len(data); i++ {
+			data[i] ^= keyBytes[i&15]
+		}
+	} else {
+		for i := 0; i < len(data); i++ {
+			data[i] ^= keyBytes[i%keyLen]
+		}
 	}
 	return data
 }

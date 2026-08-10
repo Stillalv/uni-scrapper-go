@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"uni-scraper-go/engine/model"
@@ -146,83 +147,135 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 	return info, episodes, nil
 }
 
+func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) ([]model.Episode, error) {
+	targetURL := listURL
+	if page > 1 {
+		if strings.Contains(listURL, "?") {
+			targetURL = fmt.Sprintf("%s&page=%d", listURL, page)
+		} else {
+			targetURL = fmt.Sprintf("%s?page=%d", listURL, page)
+		}
+	}
+
+	req, err := http.NewRequest("GET", targetURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+	req.Header.Set("Referer", "https://www.webtoons.com/")
+
+	resp, err := utils.HTTPClient.Do(req)
+	if err != nil || resp.StatusCode != 200 {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return nil, fmt.Errorf("HTTP error for page %d", page)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	episodeNoRe := regexp.MustCompile(`episode_no=(\d+)`)
+	var pageEpisodes []model.Episode
+
+	doc.Find("#_listUl a, ul.card_lst a").Each(func(i int, s *goquery.Selection) {
+		href, exists := s.Attr("href")
+		if !exists {
+			return
+		}
+		matches := episodeNoRe.FindStringSubmatch(href)
+		if len(matches) < 2 {
+			return
+		}
+		epNo, _ := strconv.Atoi(matches[1])
+
+		subjTag := s.Find("span.subj, .subj")
+		title := ""
+		if subjTag.Length() > 0 {
+			title = strings.TrimSpace(subjTag.Text())
+		}
+
+		relURL, _ := url.Parse(href)
+		fullURL := baseURL.ResolveReference(relURL).String()
+
+		chNum := fmt.Sprintf("%03d", epNo)
+		folderName := utils.SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, title))
+		pageEpisodes = append(pageEpisodes, model.Episode{
+			EpisodeNo:  epNo,
+			Title:      title,
+			URL:        fullURL,
+			ChNum:      chNum,
+			FolderName: folderName,
+		})
+	})
+
+	return pageEpisodes, nil
+}
+
 func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode, error) {
 	epMap := make(map[int]model.Episode)
+	var mu sync.Mutex
 	baseURL, _ := url.Parse(listURL)
-	page := 1
+
+	// Fetch Page 1 first
+	p1Episodes, err := fetchWebtoonEpisodePage(listURL, 1, baseURL)
+	if err != nil || len(p1Episodes) == 0 {
+		return nil, err
+	}
+
+	for _, ep := range p1Episodes {
+		epMap[ep.EpisodeNo] = ep
+	}
+
+	// Fetch subsequent pages in parallel batches of 10
+	batchSize := 10
+	currentStartPage := 2
 
 	for {
-		targetURL := listURL
-		if page > 1 {
-			if strings.Contains(listURL, "?") {
-				targetURL = fmt.Sprintf("%s&page=%d", listURL, page)
-			} else {
-				targetURL = fmt.Sprintf("%s?page=%d", listURL, page)
-			}
-		}
+		var wg sync.WaitGroup
+		hasEmptyPage := false
+		var batchMu sync.Mutex
 
-		req, err := http.NewRequest("GET", targetURL, nil)
-		if err != nil {
-			break
-		}
-		req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
-		req.Header.Set("Referer", "https://www.webtoons.com/")
-
-		resp, err := utils.HTTPClient.Do(req)
-		if err != nil || resp.StatusCode != 200 {
-			if resp != nil {
-				resp.Body.Close()
-			}
-			break
-		}
-
-		doc, err := goquery.NewDocumentFromReader(resp.Body)
-		resp.Body.Close()
-		if err != nil {
-			break
-		}
-
-		episodeNoRe := regexp.MustCompile(`episode_no=(\d+)`)
-		newInPage := 0
-
-		doc.Find("#_listUl a, ul.card_lst a").Each(func(i int, s *goquery.Selection) {
-			href, exists := s.Attr("href")
-			if !exists {
-				return
-			}
-			matches := episodeNoRe.FindStringSubmatch(href)
-			if len(matches) < 2 {
-				return
-			}
-			epNo, _ := strconv.Atoi(matches[1])
-
-			subjTag := s.Find("span.subj, .subj")
-			title := ""
-			if subjTag.Length() > 0 {
-				title = strings.TrimSpace(subjTag.Text())
-			}
-
-			relURL, _ := url.Parse(href)
-			fullURL := baseURL.ResolveReference(relURL).String()
-
-			if _, exists := epMap[epNo]; !exists {
-				chNum := fmt.Sprintf("%03d", epNo)
-				folderName := utils.SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, title))
-				epMap[epNo] = model.Episode{
-					EpisodeNo:  epNo,
-					Title:      title,
-					URL:        fullURL,
-					ChNum:      chNum,
-					FolderName: folderName,
+		for p := 0; p < batchSize; p++ {
+			pageNo := currentStartPage + p
+			wg.Add(1)
+			go func(pNum int) {
+				defer wg.Done()
+				eps, err := fetchWebtoonEpisodePage(listURL, pNum, baseURL)
+				if err != nil || len(eps) == 0 {
+					batchMu.Lock()
+					hasEmptyPage = true
+					batchMu.Unlock()
+					return
 				}
-				newInPage++
-			}
-		})
 
-		if newInPage == 0 {
+				mu.Lock()
+				newCount := 0
+				for _, ep := range eps {
+					if _, exists := epMap[ep.EpisodeNo]; !exists {
+						epMap[ep.EpisodeNo] = ep
+						newCount++
+					}
+				}
+				mu.Unlock()
+
+				if newCount == 0 {
+					batchMu.Lock()
+					hasEmptyPage = true
+					batchMu.Unlock()
+				}
+			}(pageNo)
+		}
+
+		wg.Wait()
+
+		if hasEmptyPage {
 			break
 		}
-		page++
+		currentStartPage += batchSize
 	}
 
 	episodes := make([]model.Episode, 0, len(epMap))

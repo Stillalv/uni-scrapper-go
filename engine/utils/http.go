@@ -15,10 +15,10 @@ var HTTPClient = &http.Client{
 			KeepAlive: 60 * time.Second,
 		}).DialContext,
 		ForceAttemptHTTP2:   true,
-		MaxIdleConns:        300,
+		MaxIdleConns:        200,
 		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 10 * time.Second,
+		TLSHandshakeTimeout: 5 * time.Second,
 	},
 }
 
