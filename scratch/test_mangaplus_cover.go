@@ -2,22 +2,21 @@ package main
 
 import (
 	"fmt"
+	"net/http/httptest"
+	"net/url"
 
-	"uni-scraper-go/engine/providers/mangaplus"
+	"uni-scraper-go/server"
 )
 
 func main() {
-	p := mangaplus.NewMangaPlusProvider("id")
-	comics, err := p.FetchCatalog(true, nil)
-	if err != nil {
-		fmt.Println("Err:", err)
-		return
-	}
-	fmt.Printf("Loaded %d MANGA Plus comics with covers:\n", len(comics))
-	for i, c := range comics {
-		fmt.Printf("%d. %s\n   ID: %s | Cover: %s\n\n", i+1, c.Title, c.ID, c.CoverURL)
-		if i >= 4 {
-			break
-		}
-	}
+	targetImg := "https://jumpg-assets.tokyo-cdn.com/secure/title/100141/title_thumbnail_portrait_list/311764.jpg?hash=Fq9KosFvZToZU-3BnYmr5w&expires=2145884400"
+	req := httptest.NewRequest("GET", "/api/proxy-image?url="+url.QueryEscape(targetImg), nil)
+	w := httptest.NewRecorder()
+
+	server.HandleProxyImage(w, req)
+
+	resp := w.Result()
+	fmt.Println("Status Code:", resp.StatusCode)
+	fmt.Println("Content-Type:", resp.Header.Get("Content-Type"))
+	fmt.Println("Body length:", len(w.Body.Bytes()))
 }

@@ -64,7 +64,7 @@ func (p *MangaPlusProvider) FetchCatalog(forceRefresh bool, logCb func(string)) 
 						TitleNo string `json:"title_no,omitempty"`
 					}
 					var rawList []cachedItem
-					if err := json.Unmarshal(data, &rawList); err == nil && len(rawList) > 0 {
+					if err := json.Unmarshal(data, &rawList); err == nil && len(rawList) > 0 && rawList[0].CoverURL != "" {
 						result := make([]model.CatalogItem, len(rawList))
 						for i, item := range rawList {
 							result[i] = item.CatalogItem
