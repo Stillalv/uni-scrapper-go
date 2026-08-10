@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -134,14 +135,54 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 	return finalURLs, nil, hasBanner, nil
 }
 
-func downloadSingleImage(task model.ImageTask, filePath string, cfg model.DownloadConfig) bool {
-	for attempt := 0; attempt < 3; attempt++ {
-		if attempt > 0 {
-			time.Sleep(50 * time.Millisecond)
+func downloadSingleImageChunked(task model.ImageTask) ([]byte, bool) {
+	reqHead, err := http.NewRequest("GET", task.URL, nil)
+	if err != nil {
+		return nil, false
+	}
+	reqHead.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+	if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
+		reqHead.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
+		reqHead.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+	} else {
+		reqHead.Header.Set("Referer", task.Viewer)
+	}
+	reqHead.Header.Set("Range", "bytes=0-0")
+
+	respHead, err := utils.HTTPClient.Do(reqHead)
+	if err != nil || (respHead.StatusCode != 206 && respHead.StatusCode != 200) {
+		if respHead != nil {
+			respHead.Body.Close()
 		}
+		return nil, false
+	}
+
+	contentRange := respHead.Header.Get("Content-Range")
+	respHead.Body.Close()
+
+	totalSize := int64(0)
+	if parts := strings.Split(contentRange, "/"); len(parts) >= 2 {
+		totalSize, _ = strconv.ParseInt(parts[1], 10, 64)
+	}
+
+	if totalSize < 100*1024 {
+		return nil, false
+	}
+
+	mid := totalSize / 2
+	chunk1Buf := make([]byte, mid+1)
+	chunk2Buf := make([]byte, totalSize-mid-1)
+
+	var wg sync.WaitGroup
+	var err1, err2 error
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
 		req, err := http.NewRequest("GET", task.URL, nil)
 		if err != nil {
-			return false
+			err1 = err
+			return
 		}
 		req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
 		if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
@@ -150,28 +191,104 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 		} else {
 			req.Header.Set("Referer", task.Viewer)
 		}
+		req.Header.Set("Range", fmt.Sprintf("bytes=0-%d", mid))
 
 		resp, err := utils.HTTPClient.Do(req)
-		if err != nil {
-			continue
+		if err != nil || resp.StatusCode != 206 {
+			err1 = fmt.Errorf("chunk1 failed")
+			if resp != nil {
+				resp.Body.Close()
+			}
+			return
 		}
-
-		if resp.StatusCode != 200 {
-			resp.Body.Close()
-			continue
-		}
-
-		bodyBytes, err := io.ReadAll(resp.Body)
+		_, err1 = io.ReadFull(resp.Body, chunk1Buf)
 		resp.Body.Close()
-		if err != nil || len(bodyBytes) == 0 {
-			continue
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		req, err := http.NewRequest("GET", task.URL, nil)
+		if err != nil {
+			err2 = err
+			return
+		}
+		req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+		if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
+			req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
+			req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+		} else {
+			req.Header.Set("Referer", task.Viewer)
+		}
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-%d", mid+1, totalSize-1))
+
+		resp, err := utils.HTTPClient.Do(req)
+		if err != nil || resp.StatusCode != 206 {
+			err2 = fmt.Errorf("chunk2 failed")
+			if resp != nil {
+				resp.Body.Close()
+			}
+			return
+		}
+		_, err2 = io.ReadFull(resp.Body, chunk2Buf)
+		resp.Body.Close()
+	}()
+
+	wg.Wait()
+
+	if err1 != nil || err2 != nil {
+		return nil, false
+	}
+
+	finalBytes := append(chunk1Buf, chunk2Buf...)
+	return finalBytes, true
+}
+
+func downloadSingleImage(task model.ImageTask, filePath string, cfg model.DownloadConfig) bool {
+	for attempt := 0; attempt < 3; attempt++ {
+		if attempt > 0 {
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		var bodyBytes []byte
+		var ok bool
+
+		bodyBytes, ok = downloadSingleImageChunked(task)
+		if !ok {
+			req, err := http.NewRequest("GET", task.URL, nil)
+			if err != nil {
+				return false
+			}
+			req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+			if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
+				req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
+				req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+			} else {
+				req.Header.Set("Referer", task.Viewer)
+			}
+
+			resp, err := utils.HTTPClient.Do(req)
+			if err != nil {
+				continue
+			}
+
+			if resp.StatusCode != 200 {
+				resp.Body.Close()
+				continue
+			}
+
+			bodyBytes, err = io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil || len(bodyBytes) == 0 {
+				continue
+			}
 		}
 
 		if task.EncryptionKey != "" {
 			bodyBytes = mangaplus.XORDecrypt(bodyBytes, task.EncryptionKey)
 		}
 
-		err = os.WriteFile(filePath, bodyBytes, 0644)
+		err := os.WriteFile(filePath, bodyBytes, 0644)
 		if err == nil && len(bodyBytes) > 0 {
 			return true
 		}
