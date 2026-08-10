@@ -356,15 +356,26 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 			isDownloading = false
 		}()
 
+		var lastSSEEmit int64
 		progressAdapter := func(progData map[string]interface{}) {
 			evtType, _ := progData["type"].(string)
-			if evtType == "CHAPTER_FINISHED" {
-				Broadcaster.Broadcast("CHAPTER_FINISHED", progData)
-			} else {
-				Broadcaster.Broadcast("PROGRESS_UPDATE", progData)
+			if evtType == "CHAPTER_FINISHED" || evtType == "SCANNING" {
+				Broadcaster.Broadcast(evtType, progData)
+				if notify != nil {
+					notify(evtType, progData)
+				}
+				return
 			}
-			if notify != nil {
-				notify(evtType, progData)
+
+			now := time.Now().UnixMilli()
+			last := atomic.LoadInt64(&lastSSEEmit)
+			if now-last >= 150 {
+				if atomic.CompareAndSwapInt64(&lastSSEEmit, last, now) {
+					Broadcaster.Broadcast("PROGRESS_UPDATE", progData)
+					if notify != nil {
+						notify("PROGRESS_UPDATE", progData)
+					}
+				}
 			}
 		}
 

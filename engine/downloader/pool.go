@@ -143,10 +143,8 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 		if err != nil {
 			return false
 		}
-		for k, v := range utils.DefaultHeaders {
-			req.Header.Set(k, v)
-		}
-		if strings.Contains(task.URL, "tokyo-cdn.com") {
+		req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+		if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
 			req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
 			req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
 		} else {
