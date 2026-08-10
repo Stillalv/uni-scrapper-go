@@ -36,6 +36,7 @@ export default function App() {
   const [activeWorkers, setActiveWorkers] = useState([]);
   
   const [toasts, setToasts] = useState([]);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyList, setHistoryList] = useState(() => {
     try {
       const saved = localStorage.getItem('webtoon_download_history_v2');
