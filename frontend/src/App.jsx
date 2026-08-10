@@ -35,9 +35,23 @@ export default function App() {
   const [downloadProgress, setDownloadProgress] = useState(null);
   const [activeWorkers, setActiveWorkers] = useState([]);
   
-  const [toasts, setToasts] = useState([]);
-  const [historyList, setHistoryList] = useState([]);
-  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyList, setHistoryList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('webtoon_download_history_v2');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const saveHistoryList = (newList) => {
+    const safeList = Array.isArray(newList) ? newList : [];
+    setHistoryList(safeList);
+    try {
+      localStorage.setItem('webtoon_download_history_v2', JSON.stringify(safeList));
+    } catch (e) {}
+  };
   const [serverStatus, setServerStatus] = useState('online');
 
   const [botConfig, setBotConfig] = useState({
@@ -179,38 +193,50 @@ export default function App() {
             `Successfully downloaded ${payload.data.imageCount} images (${payload.data.chapterTitle || 'Chapter'})`,
             'success'
           );
-          setHistoryList((prev) => [
-            {
-              title: `Chapter ${payload.data.chapterNum} (${payload.data.chapterTitle || 'Ep'})`,
-              completedCount: payload.data.imageCount,
-              totalCount: payload.data.imageCount,
-              format: payload.data.format,
-              outputDir: payload.data.outputDir,
-              timestamp: payload.data.timestamp || new Date().toLocaleTimeString(),
-            },
-            ...prev,
-          ]);
         } else if (payload.type === 'TOAST_NOTIFICATION') {
           addToast(payload.data.title, payload.data.message, payload.data.type);
-        } else if (payload.type === 'DOWNLOAD_STOPPED') {
+        } else if (payload.type === 'DOWNLOAD_STOPPED' || payload.type === 'DOWNLOAD_FINISHED') {
           setIsDownloading(false);
           setDownloadProgress(null);
-          addToast(payload.data.title || 'Download Stopped', payload.data.message, payload.data.type || 'warning');
-        } else if (payload.type === 'DOWNLOAD_FINISHED') {
-          setIsDownloading(false);
-          addToast('Download Complete', payload.data.message, 'success');
-          // Add to history
-          setHistoryList((prev) => [
-            {
-              title: payload.data.title || 'Webtoon Download',
-              completedCount: payload.data.completedCount,
-              totalCount: payload.data.totalCount,
-              format: payload.data.format,
-              outputDir: payload.data.outputDir,
-              timestamp: new Date().toLocaleTimeString(),
-            },
-            ...prev,
-          ]);
+          const isStop = payload.type === 'DOWNLOAD_STOPPED';
+          addToast(payload.data.title || (isStop ? 'Download Stopped' : 'Download Complete'), payload.data.message, isStop ? 'warning' : 'success');
+
+          const ms = payload.data.elapsedMs || 0;
+          const sec = payload.data.elapsedSec || (ms / 1000) || 0;
+          let durationText = '0s';
+          if (sec < 60) {
+            durationText = `${sec.toFixed(1)}s`;
+          } else {
+            const mins = Math.floor(sec / 60);
+            const secs = Math.round(sec % 60);
+            durationText = `${mins}m ${secs}s`;
+          }
+
+          const imgs = payload.data.totalImages || payload.data.completedCount || 0;
+          const avgSpeed = sec > 0 && imgs > 0 ? (imgs / sec).toFixed(1) : '-';
+
+          const newHistoryItem = {
+            id: Date.now() + Math.random(),
+            title: payload.data.title || payload.data.comicTitle || 'Webtoon Download',
+            comicTitle: payload.data.comicTitle || payload.data.title,
+            completedCount: payload.data.completedCount || 0,
+            totalCount: payload.data.totalCount || 0,
+            totalImages: imgs,
+            format: payload.data.format || 'WEBP',
+            workers: payload.data.workers || 6,
+            outputDir: payload.data.outputDir,
+            coverUrl: payload.data.coverUrl,
+            genre: payload.data.genre,
+            durationText,
+            elapsedMs: ms,
+            elapsedSec: sec,
+            avgSpeed,
+            status: isStop ? 'stopped' : 'completed',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+            finishedDate: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+          };
+
+          saveHistoryList([newHistoryItem, ...(Array.isArray(historyList) ? historyList : [])]);
         }
       } catch (err) {
         console.error('SSE Error:', err);
@@ -409,7 +435,8 @@ export default function App() {
           {activeTab === 'history' && (
             <HistoryView
               historyList={historyList}
-              onClearHistory={() => setHistoryList([])}
+              onClearHistory={(newList) => saveHistoryList(newList || [])}
+              onOpenFolder={handleOpenFolder}
             />
           )}
 

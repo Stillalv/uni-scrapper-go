@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"uni-scraper-go/engine/downloader"
 	"uni-scraper-go/engine/model"
@@ -350,6 +351,7 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 
 	// Run download asynchronously with SSE real-time updates
 	go func() {
+		startTime := time.Now()
 		defer func() {
 			isDownloading = false
 		}()
@@ -373,15 +375,24 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 			progressAdapter,
 		)
 
+		elapsedMs := time.Since(startTime).Milliseconds()
+		elapsedSec := time.Since(startTime).Seconds()
+
 		if atomic.LoadInt32(downloadStopFlag) == 1 {
 			isDownloading = false
 			data := map[string]interface{}{
 				"title":          "Download Stopped",
+				"comicTitle":     info.Title,
 				"completedCount": successCh,
 				"totalCount":     totalCh,
 				"format":         cfg.Format,
+				"workers":        cfg.MaxWorkers,
 				"outputDir":      cfg.OutputDir,
-				"message":        fmt.Sprintf("The in-progress chapter was completed, then the download stopped. Finished %d of %d chapters.", successCh, totalCh),
+				"coverUrl":       info.CoverURL,
+				"genre":          info.Genre,
+				"elapsedMs":      elapsedMs,
+				"elapsedSec":     elapsedSec,
+				"message":        fmt.Sprintf("Download stopped. Finished %d of %d chapters in %.1fs.", successCh, totalCh, elapsedSec),
 				"type":           "warning",
 			}
 			Broadcaster.Broadcast("DOWNLOAD_STOPPED", data)
@@ -395,8 +406,13 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				"completedCount": successCh,
 				"totalCount":     totalCh,
 				"format":         cfg.Format,
+				"workers":        cfg.MaxWorkers,
 				"outputDir":      cfg.OutputDir,
-				"message":        fmt.Sprintf("Download complete! %d of %d chapters downloaded.", successCh, totalCh),
+				"coverUrl":       info.CoverURL,
+				"genre":          info.Genre,
+				"elapsedMs":      elapsedMs,
+				"elapsedSec":     elapsedSec,
+				"message":        fmt.Sprintf("Download complete! %d of %d chapters downloaded in %.1fs.", successCh, totalCh, elapsedSec),
 			}
 			Broadcaster.Broadcast("DOWNLOAD_FINISHED", data)
 			if notify != nil {
