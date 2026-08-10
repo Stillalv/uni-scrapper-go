@@ -191,7 +191,7 @@ func main() {
 	fmt.Println("==================================================")
 
 	w := webview2.NewWithOptions(webview2.WebViewOptions{
-		Debug: false,
+		Debug: true,
 		WindowOptions: webview2.WindowOptions{
 			Title:  "Webtoon Scraper Pro - Native Desktop Edition",
 			Width:  1240,
