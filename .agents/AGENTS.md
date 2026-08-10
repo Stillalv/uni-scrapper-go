@@ -44,3 +44,8 @@
    - Antigravity MUST commit code changes locally after completing milestones, fixing issues, or refactoring.
 2. **Remote Push Protection (Strict)**:
    - Antigravity MUST ALWAYS ask for explicit user permission before executing `git push` to remote repositories. NEVER push automatically without user approval.
+3. **GitHub Release Naming & Formatting Standard**:
+   - Release Titles MUST follow the standardized format: `<tag> - <Descriptive Feature Subject>` (e.g. `v2.2.0 - IDM-Style Parallel Chunking & High-Speed Optimizations`).
+   - NEVER name releases with just the version tag alone (e.g. `v2.2.0`). Always append the feature subject after the hyphen `-`.
+   - Release notes body MUST follow the structured GitHub Flavored Markdown format (`# 🚀 Release Notes - Version X.Y.Z` with numbered feature highlights and emoji headers).
+
