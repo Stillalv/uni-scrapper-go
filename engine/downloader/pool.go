@@ -229,7 +229,13 @@ func DownloadEpisodesWithGranularProgress(
 		}
 	}
 
-	scanWorkers := 8
+	scanWorkers := cfg.MaxWorkers
+	if scanWorkers < 8 {
+		scanWorkers = 8
+	}
+	if scanWorkers > 32 {
+		scanWorkers = 32
+	}
 	if scanWorkers > totalCh {
 		scanWorkers = totalCh
 	}

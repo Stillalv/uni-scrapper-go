@@ -12,11 +12,12 @@ var HTTPClient = &http.Client{
 	Transport: &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
-			KeepAlive: 30 * time.Second,
+			KeepAlive: 60 * time.Second,
 		}).DialContext,
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 25,
+		MaxIdleConns:        300,
+		MaxIdleConnsPerHost: 100,
 		IdleConnTimeout:     90 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
 	},
 }
 
