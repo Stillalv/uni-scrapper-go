@@ -1,5 +1,7 @@
 import React from 'react';
 import { Folder, FolderTwo, LayersTwo, Sun, Moon } from '@mynaui/icons-react';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 const callNative = (name) => {
   try {
@@ -57,14 +59,16 @@ export default function WindowHeader({
       </div>
 
       <div className="flex items-center gap-3 text-xs" style={{ WebkitAppRegion: 'no-drag', appRegion: 'no-drag' }} data-no-drag>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onToggleTheme}
-          className="flex items-center gap-1.5 text-[var(--text-sub)] hover:text-[var(--text-primary)] transition-colors active:scale-95"
           title={`Switch to ${theme === 'dark' ? 'Light Mode (Apple macOS)' : 'Dark Mode'}`}
+          className="!h-7 !px-2 font-medium"
         >
           {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
           <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-medium">{theme === 'dark' ? 'Light' : 'Dark'}</span>
-        </button>
+        </Button>
 
         <span className="w-px h-4 bg-[var(--border-color)]"></span>
 
@@ -77,29 +81,33 @@ export default function WindowHeader({
           <span className="truncate text-[11px]">{outputDir || "Select directory..."}</span>
         </div>
 
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={onOpenFolder}
-          className="flex items-center justify-center text-[var(--text-sub)] hover:text-[var(--text-primary)] transition-colors active:scale-95"
           title="Open Current Output Directory in Windows File Explorer"
+          className="!h-7 !w-7 !px-0"
         >
           <FolderTwo className="w-3.5 h-3.5" />
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="primary"
+          size="sm"
           onClick={onSelectFolder}
-          className="h-7 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] transition-all border border-blue-400/20 shadow-sm flex items-center gap-1.5 active:scale-95"
+          className="!h-7 !px-3 !text-[11px]"
         >
           Select Directory
-        </button>
+        </Button>
 
         <span className="w-px h-4 bg-[var(--border-color)]"></span>
 
-        <div className="flex items-center gap-1.5">
+        <Badge variant={serverStatus === 'online' ? 'emerald' : 'amber'} className="!py-0.5">
           <span className={`w-1.5 h-1.5 rounded-full ${serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
-          <span className="text-[9px] uppercase tracking-wider font-semibold text-[var(--text-sub)]">
+          <span className="text-[9px] uppercase tracking-wider font-semibold">
             {serverStatus === 'online' ? 'Online' : 'Connecting'}
           </span>
-        </div>
+        </Badge>
       </div>
     </header>
   );

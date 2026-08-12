@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Heart, BookOpen, Trash, Search, ExternalLink, LayersTwo, Sparkles, Filter } from '@mynaui/icons-react';
 import webtoonLogo from '../assets/logo/WEBTOON_Logo.png';
 import mangaplusLogo from '../assets/logo/mangaplus.png';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 export default function BookmarksView({
   bookmarks = [],
@@ -61,9 +63,9 @@ export default function BookmarksView({
               className="w-full pl-9 pr-4 py-1.5 rounded-xl text-xs bg-black/5 dark:bg-white/5 border border-[var(--border-color)] focus:outline-none focus:border-blue-500 transition-all"
             />
           </div>
-          <span className="text-xs text-[var(--text-sub)] opacity-60 font-medium shrink-0">
+          <Badge variant="rose" className="shrink-0 !py-1">
             {bookmarks.length} saved
-          </span>
+          </Badge>
         </div>
       </div>
 
@@ -76,26 +78,20 @@ export default function BookmarksView({
           const count = getCatalogCount(cat.id);
           const isActive = activeCatalogFilter === cat.id;
           return (
-            <button
+            <Button
               key={cat.id}
+              variant={isActive ? 'primary' : 'ghost'}
+              size="sm"
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className={`h-8 px-3 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-2 border ${
-                isActive
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
+              className="!h-8 !px-3 shrink-0"
             >
               {cat.flag && <span className={`fi ${cat.flag} rounded-[2px] shadow-sm w-4 h-3 shrink-0`}></span>}
               {cat.logo && <img src={cat.logo} alt={cat.label} className="w-4 h-4 object-contain shrink-0" />}
               <span>{cat.label}</span>
-              <span
-                className={`text-[11px] font-medium opacity-80 ${
-                  isActive ? 'text-white/80' : 'text-[var(--text-sub)]'
-                }`}
-              >
+              <span className={`text-[11px] font-medium opacity-80 ${isActive ? 'text-white/80' : 'text-[var(--text-sub)]'}`}>
                 {count}
               </span>
-            </button>
+            </Button>
           );
         })}
       </div>
@@ -157,23 +153,27 @@ export default function BookmarksView({
 
                 {/* Actions Footer */}
                 <div className="pt-2 border-t border-[var(--border-color)] flex items-center gap-2">
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={() => {
                       onSelectComic(comic);
                       onNavigateScraper();
                     }}
-                    className="flex-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95"
+                    icon={LayersTwo}
+                    className="flex-1 !h-8"
                   >
-                    <LayersTwo className="w-3.5 h-3.5" /> Select & Download
-                  </button>
+                    Select & Download
+                  </Button>
 
-                  <button
+                  <Button
+                    variant="danger"
+                    size="sm"
                     onClick={() => onRemoveBookmark(comic)}
                     title="Remove from Bookmarks"
-                    className="p-1.5 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 border border-red-500/20 transition-all active:scale-95"
-                  >
-                    <Trash className="w-4 h-4" />
-                  </button>
+                    icon={Trash}
+                    className="!h-8 !w-8 !px-0"
+                  />
                 </div>
               </div>
             );
@@ -195,12 +195,13 @@ export default function BookmarksView({
             </p>
           </div>
 
-          <button
+          <Button
+            variant="primary"
             onClick={onNavigateCatalog}
-            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold inline-flex items-center gap-2 transition-all hover:bg-blue-500 active:scale-95 shadow-sm"
+            icon={BookOpen}
           >
-            <BookOpen className="w-4 h-4" /> Browse Catalog Explorer
-          </button>
+            Browse Catalog Explorer
+          </Button>
         </div>
       )}
     </div>

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ClockWaves, Search, CheckCircle, ClockCircle, TrashTwo, LayersTwo, Folder, Copy, Lightning, Zap, DangerOctagon, BookOpen } from '@mynaui/icons-react';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 export default function HistoryView({ historyList, onClearHistory, onOpenFolder }) {
   const [search, setSearch] = useState('');
@@ -70,17 +72,20 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
         </div>
 
         {safeHistory.length > 0 && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             onClick={() => {
               if (window.confirm('Clear all download history logs?')) {
                 handleDeleteItem(null);
                 if (onClearHistory) onClearHistory([]);
               }
             }}
-            className="h-8 px-3 rounded-lg bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 border border-rose-500/30 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-[0.98] shrink-0"
+            icon={TrashTwo}
+            className="!h-8 !px-3 shrink-0"
           >
-            <TrashTwo className="w-3.5 h-3.5" /> Clear All
-          </button>
+            Clear All
+          </Button>
         )}
       </div>
 
@@ -178,18 +183,12 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] px-2 py-0.5 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider border border-blue-500/20">
+                        <Badge variant="blue">
                           {item.genre || 'COMIC'}
-                        </span>
-                        {isStopped ? (
-                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-amber-600/10 text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider border border-amber-500/20 flex items-center gap-1">
-                            <DangerOctagon className="w-3 h-3" /> Stopped
-                          </span>
-                        ) : (
-                          <span className="text-[9px] px-2 py-0.5 rounded-md bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider border border-emerald-500/20 flex items-center gap-1">
-                            <CheckCircle className="w-3 h-3" /> Completed
-                          </span>
-                        )}
+                        </Badge>
+                        <Badge variant={isStopped ? 'amber' : 'emerald'} icon={isStopped ? DangerOctagon : CheckCircle}>
+                          {isStopped ? 'Stopped' : 'Completed'}
+                        </Badge>
                       </div>
 
                       <h3 className="text-sm font-bold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
@@ -200,10 +199,9 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
 
                   {/* Elapsed Time Prominent Badge */}
                   <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                    <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1.5 text-xs font-mono font-bold shadow-sm">
-                      <ClockCircle className="w-3.5 h-3.5" />
-                      <span>Duration: {durationDisplay}</span>
-                    </div>
+                    <Badge variant="amber" icon={ClockCircle} className="!px-3 !py-1.5 !text-xs font-mono font-bold">
+                      Duration: {durationDisplay}
+                    </Badge>
                   </div>
                 </div>
 
@@ -244,32 +242,39 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                     </span>
 
                     {item.outputDir && onOpenFolder && (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => onOpenFolder(item.outputDir)}
-                        className="h-7 px-2.5 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[11px] font-semibold border border-[var(--border-color)] flex items-center gap-1 transition-all active:scale-95"
+                        icon={Folder}
+                        className="!h-7 !px-2.5 !text-[11px]"
                         title="Open Output Directory in Explorer"
                       >
-                        <Folder className="w-3 h-3" /> Open
-                      </button>
+                        Open
+                      </Button>
                     )}
 
                     {item.outputDir && (
-                      <button
+                      <Button
+                        variant="secondary"
+                        size="sm"
                         onClick={() => handleCopyPath(item.outputDir, itemKey)}
-                        className="h-7 px-2.5 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[11px] font-semibold border border-[var(--border-color)] flex items-center gap-1 transition-all active:scale-95"
+                        icon={Copy}
+                        className="!h-7 !px-2.5 !text-[11px]"
                         title="Copy Directory Path"
                       >
-                        <Copy className="w-3 h-3" /> {copiedId === itemKey ? 'Copied!' : 'Copy'}
-                      </button>
+                        {copiedId === itemKey ? 'Copied!' : 'Copy'}
+                      </Button>
                     )}
 
-                    <button
+                    <Button
+                      variant="danger"
+                      size="sm"
                       onClick={() => handleDeleteItem(itemKey)}
-                      className="h-7 w-7 flex items-center justify-center rounded-lg bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 transition-all active:scale-95"
+                      icon={TrashTwo}
+                      className="!h-7 !w-7 !px-0"
                       title="Delete Entry"
-                    >
-                      <TrashTwo className="w-3 h-3" />
-                    </button>
+                    />
                   </div>
                 </div>
               </div>

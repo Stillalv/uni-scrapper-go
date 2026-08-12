@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Wrench, Zap, Refresh, Activity, ShieldCheck, CheckCircle, ChartColumn, ChartLine } from '@mynaui/icons-react';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
 
 export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelectedWorkers }) {
   const [runningTest, setRunningTest] = useState(false);
@@ -64,32 +66,24 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
               <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <h3 className="text-xs font-semibold">Worker Concurrency Benchmark Test</h3>
             </div>
-            <span className="text-[9px] px-2 py-0.5 rounded bg-blue-600/10 text-blue-600 dark:text-blue-400 font-mono font-semibold uppercase tracking-wider">
+            <Badge variant="blue" className="font-mono">
               6 · 8 · 20 · 32
-            </span>
+            </Badge>
           </div>
 
           <p className="text-xs opacity-60 leading-relaxed">
             Measures HTTP/2 stream multiplexing, throughput (imgs/sec), bandwidth utilisation (Mbps), and socket latency across worker thread counts.
           </p>
 
-          <button
+          <Button
+            variant="primary"
             onClick={runFullBenchmark}
-            disabled={runningTest}
-            className="w-full h-10 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50 active:scale-[0.98]"
+            loading={runningTest}
+            icon={Activity}
+            className="w-full !h-10"
           >
-            {runningTest ? (
-              <>
-                <Refresh className="w-4 h-4 animate-spin text-white" />
-                <span className="truncate">{activeStep || 'Benchmarking Workers...'}</span>
-              </>
-            ) : (
-              <>
-                <Activity className="w-4 h-4" />
-                <span>Run Automated Concurrency Benchmark</span>
-              </>
-            )}
-          </button>
+            {runningTest ? (activeStep || 'Benchmarking Workers...') : 'Run Automated Concurrency Benchmark'}
+          </Button>
         </div>
 
         {/* Card 2: Active Profile Selection */}

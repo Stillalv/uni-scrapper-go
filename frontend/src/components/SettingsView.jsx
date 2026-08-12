@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { FineTune, Folder, Microchip, ImageRectangle, ShieldCheck, BookOpen } from '@mynaui/icons-react';
-import AppleSelect from './AppleSelect';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import Dropdown from './ui/Dropdown';
+import Alert from './ui/Alert';
 
 export default function SettingsView({
   outputDir,
@@ -68,12 +71,14 @@ export default function SettingsView({
               <div className="h-8 px-3 flex items-center rounded-lg glass-input text-xs flex-1 truncate font-mono">
                 {outputDir || "Select directory..."}
               </div>
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
                 onClick={onSelectFolder}
-                className="h-8 px-3 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-xs font-semibold border border-[var(--border-color)] transition-all shrink-0 active:scale-[0.98]"
+                className="!h-8 shrink-0"
               >
                 Change
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -83,17 +88,15 @@ export default function SettingsView({
             </label>
             <div className="flex items-center gap-1 p-1 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
               {formats.map((fmt) => (
-                <button
+                <Button
                   key={fmt}
+                  variant={selectedFormat === fmt ? 'primary' : 'ghost'}
+                  size="sm"
                   onClick={() => setSelectedFormat(fmt)}
-                  className={`flex-1 py-1.5 text-xs rounded-md font-semibold transition-all ${
-                    selectedFormat === fmt
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'opacity-60 hover:opacity-100'
-                  }`}
+                  className="flex-1 !h-7 !px-1"
                 >
                   {fmt}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -108,7 +111,7 @@ export default function SettingsView({
 
           <div className="space-y-2">
             <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Worker Concurrency Profile</label>
-            <AppleSelect
+            <Dropdown
               value={selectedWorkers}
               onChange={(v) => setSelectedWorkers(Number(v))}
               options={workerOptions}
@@ -116,12 +119,15 @@ export default function SettingsView({
           </div>
 
           <div className="pt-1">
-            <button
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => onReloadCatalog(true)}
-              className="w-full h-8 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-80 border border-[var(--border-color)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+              icon={ShieldCheck}
+              className="w-full !h-8"
             >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Force Refresh Catalog Cache
-            </button>
+              Force Refresh Catalog Cache
+            </Button>
           </div>
         </div>
       </div>
@@ -133,10 +139,10 @@ export default function SettingsView({
             <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <h3 className="text-xs font-semibold">Telegram Remote Control</h3>
           </div>
-          <span className="flex items-center gap-1.5 text-[10px] font-semibold">
-            <span className={`w-2 h-2 rounded-full ${botOnline ? 'bg-green-500 animate-pulse' : botConfigured ? 'bg-yellow-500' : 'bg-red-500'}`}></span>
+          <Badge variant={botOnline ? 'emerald' : botConfigured ? 'amber' : 'rose'}>
+            <span className={`w-2 h-2 rounded-full ${botOnline ? 'bg-emerald-500 animate-pulse' : botConfigured ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
             {botOnline ? 'Bot Online' : botConfigured ? 'Bot Offline' : 'Not Configured'}
-          </span>
+          </Badge>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -150,7 +156,7 @@ export default function SettingsView({
               className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
             />
             {botConfigured && (
-              <p className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-1">
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 ✓ Token saved — leave the field empty to keep using the saved token
               </p>
             )}
@@ -165,7 +171,7 @@ export default function SettingsView({
               className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
             />
             {savedChatIDs && !botChatIDs && (
-              <p className="text-[10px] text-green-600 dark:text-green-400 flex items-center gap-1">✓ {savedChatIDs} registered</p>
+              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">✓ {savedChatIDs} registered</p>
             )}
           </div>
         </div>
@@ -174,18 +180,23 @@ export default function SettingsView({
           <p className="text-[10px] opacity-60 leading-relaxed max-w-md">
             Token & chat ID are stored permanently — no need to re-enter them every time you open the app. The bot starts automatically when the app is opened. Message the bot <code className="font-mono">/start</code> to see your chat ID. Features: check webtoon, catalog, download, stop, status, change output folder, benchmark, history.
           </p>
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleSaveBot}
+            loading={savingBot}
             disabled={(!botToken.trim() && !botConfigured) || savingBot}
-            className="h-8 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all flex items-center gap-1.5 shadow-md disabled:opacity-50 active:scale-[0.98] shrink-0"
+            icon={BookOpen}
+            className="!h-8 shrink-0"
           >
-            <BookOpen className={`w-3.5 h-3.5 ${savingBot ? 'animate-spin' : ''}`} />
             {savingBot ? 'Saving...' : keepSavedToken ? 'Restart Bot' : 'Save & Start Bot'}
-          </button>
+          </Button>
         </div>
 
         {botConfig?.lastError && (
-          <p className="text-[10px] text-rose-500 dark:text-rose-400 font-mono break-all">{botConfig.lastError}</p>
+          <Alert type="error" title="Telegram Bot Connection Error">
+            {botConfig.lastError}
+          </Alert>
         )}
       </div>
     </div>

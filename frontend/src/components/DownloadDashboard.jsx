@@ -1,5 +1,7 @@
 import React from 'react';
 import { Microchip, CheckCircle, Zap, Activity } from '@mynaui/icons-react';
+import Badge from './ui/Badge';
+import Spinner from './ui/Spinner';
 
 export default function DownloadDashboard({ progress, activeWorkers }) {
   if (!progress) return null;
@@ -50,9 +52,9 @@ export default function DownloadDashboard({ progress, activeWorkers }) {
               <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-pulse shrink-0" />
               <span className="truncate">{statusText}</span>
             </span>
-            <span className="text-[10px] font-mono font-semibold bg-blue-600/10 text-blue-600 dark:text-blue-400 px-2 py-1 rounded border border-blue-600/20 shrink-0">
+            <Badge variant="blue" className="font-mono font-semibold shrink-0 !py-1">
               {downloadedImages} / {totalImages} Images
-            </span>
+            </Badge>
           </div>
 
           {/* Granular Progress Bar */}

@@ -1,6 +1,8 @@
 import React from 'react';
 import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle } from '@mynaui/icons-react';
-import AppleSelect from './AppleSelect';
+import Button from './ui/Button';
+import Badge from './ui/Badge';
+import Dropdown from './ui/Dropdown';
 
 export default function ComicDetails({
   comicUrl,
@@ -44,14 +46,17 @@ export default function ComicDetails({
             placeholder="Enter Webtoon URL or Title ID..."
             className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono min-w-0"
           />
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={onCheckInfo}
+            loading={checkingInfo}
             disabled={checkingInfo || isDownloading || !comicUrl}
-            className="h-8 px-3.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 active:scale-[0.98] shrink-0"
+            icon={Search}
+            className="!h-8 shrink-0"
           >
-            <Search className={`w-3.5 h-3.5 ${checkingInfo ? 'animate-spin' : ''}`} />
             {checkingInfo ? 'Checking...' : 'Fetch Info'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -71,9 +76,9 @@ export default function ComicDetails({
               <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{webtoonInfo.TotalEpisodes} Chapters</strong> ({webtoonInfo.EpisodeRange})</span>
             </div>
           </div>
-          <span className="text-xs text-emerald-500 font-medium flex items-center gap-1 shrink-0">
-            <CheckCircle className="w-3.5 h-3.5" /> Validated
-          </span>
+          <Badge variant="emerald" icon={CheckCircle} className="shrink-0">
+            Validated
+          </Badge>
         </div>
       )}
 
@@ -86,17 +91,15 @@ export default function ComicDetails({
           </label>
           <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
             {formats.map((fmt) => (
-              <button
+              <Button
                 key={fmt}
+                variant={selectedFormat === fmt ? 'primary' : 'ghost'}
+                size="sm"
                 onClick={() => setSelectedFormat(fmt)}
-                className={`flex-1 h-7 px-1 flex items-center justify-center text-xs rounded-md font-semibold transition-all ${
-                  selectedFormat === fmt
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'opacity-60 hover:opacity-100'
-                }`}
+                className="flex-1 !h-7 !px-1"
               >
                 {fmt}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -106,7 +109,7 @@ export default function ComicDetails({
           <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
             <Microchip className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Worker Profile
           </label>
-          <AppleSelect
+          <Dropdown
             value={selectedWorkers}
             onChange={(v) => setSelectedWorkers(Number(v))}
             options={workerOptions}
@@ -132,20 +135,24 @@ export default function ComicDetails({
       {/* Action Buttons */}
       <div className="pt-4 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
         {isDownloading ? (
-          <button
+          <Button
+            variant="danger"
             onClick={onCancelDownload}
-            className="px-5 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-xs border border-rose-500/30 transition-all flex items-center gap-1.5 shadow-md active:scale-[0.98]"
+            icon={SquareSolid}
+            className="!px-5 !py-2"
           >
-            <SquareSolid className="w-3.5 h-3.5" /> Stop Download
-          </button>
+            Stop Download
+          </Button>
         ) : (
-          <button
+          <Button
+            variant="primary"
             onClick={onStartDownload}
             disabled={!webtoonInfo || checkingInfo}
-            className="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs border border-blue-400/20 transition-all flex items-center gap-2 shadow-md disabled:opacity-50 active:scale-[0.98]"
+            icon={PlaySolid}
+            className="!px-6 !py-2"
           >
-            <PlaySolid className="w-3.5 h-3.5" /> Start Download
-          </button>
+            Start Download
+          </Button>
         )}
       </div>
     </div>

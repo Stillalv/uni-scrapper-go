@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen, LayersTwo, ClockWaves, FineTune, Wrench, Sparkles, CheckCircle, ChevronLeft, ChevronRight, Heart } from '@mynaui/icons-react';
+import Badge from './ui/Badge';
 
 export default function Sidebar({
   isOpen,
@@ -77,11 +78,9 @@ export default function Sidebar({
                 <span className="truncate">{item.label}</span>
               </div>
               {item.count !== null && item.count !== undefined && (
-                <span className={`text-[11px] font-medium shrink-0 ${
-                  isActive ? 'text-white/80' : 'text-[var(--text-sub)] opacity-60'
-                }`}>
+                <Badge variant={isActive ? 'blue' : 'neutral'} className="shrink-0 !py-0.5">
                   {item.count}
-                </span>
+                </Badge>
               )}
             </button>
           );
