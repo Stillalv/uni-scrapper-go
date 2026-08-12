@@ -31,12 +31,34 @@ export default function App() {
     }
   });
 
+  // Load bookmarks from Go backend API on app startup (persisted in config/bookmarks.json)
+  useEffect(() => {
+    fetch('/api/bookmarks')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === 'success' && Array.isArray(data.bookmarks)) {
+          setBookmarks(data.bookmarks);
+          try {
+            localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(data.bookmarks));
+          } catch (e) {}
+        }
+      })
+      .catch((e) => {});
+  }, []);
+
   const saveBookmarks = (newList) => {
     const safeList = Array.isArray(newList) ? newList : [];
     setBookmarks(safeList);
     try {
       localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(safeList));
     } catch (e) {}
+    
+    // Persist to disk via Go Backend API
+    fetch('/api/bookmarks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(safeList),
+    }).catch(() => {});
   };
 
   const handleToggleBookmark = (comic) => {

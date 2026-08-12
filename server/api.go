@@ -82,6 +82,96 @@ func SaveConfig(cfg SavedConfig) {
 	}
 }
 
+func getBookmarkFilePaths() []string {
+	paths := []string{}
+	appData := os.Getenv("APPDATA")
+	if appData != "" {
+		dir := filepath.Join(appData, "WebtoonScraper")
+		_ = os.MkdirAll(dir, 0755)
+		paths = append(paths, filepath.Join(dir, "bookmarks.json"))
+	}
+	userProfile := os.Getenv("USERPROFILE")
+	if userProfile != "" {
+		paths = append(paths, filepath.Join(userProfile, ".webtoon_scraper_bookmarks.json"))
+	}
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData != "" {
+		dir := filepath.Join(localAppData, "WebtoonScraper")
+		_ = os.MkdirAll(dir, 0755)
+		paths = append(paths, filepath.Join(dir, "bookmarks.json"))
+	}
+	pwd, err := os.Getwd()
+	if err == nil {
+		paths = append(paths, filepath.Join(pwd, "bookmarks.json"))
+	}
+	return paths
+}
+
+func LoadBookmarks() []map[string]interface{} {
+	for _, file := range getBookmarkFilePaths() {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		var list []map[string]interface{}
+		if err := json.Unmarshal(data, &list); err == nil {
+			return list
+		}
+	}
+	return []map[string]interface{}{}
+}
+
+func SaveBookmarks(list []map[string]interface{}) {
+	if list == nil {
+		list = []map[string]interface{}{}
+	}
+	data, err := json.MarshalIndent(list, "", "  ")
+	if err != nil {
+		return
+	}
+	for _, file := range getBookmarkFilePaths() {
+		_ = os.WriteFile(file, data, 0644)
+	}
+}
+
+func HandleBookmarks(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method == "GET" {
+		list := LoadBookmarks()
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "success",
+			"bookmarks": list,
+		})
+		return
+	}
+
+	if r.Method == "POST" {
+		var list []map[string]interface{}
+		var reqBody struct {
+			Bookmarks []map[string]interface{} `json:"bookmarks"`
+		}
+		data, err := io.ReadAll(r.Body)
+		if err == nil {
+			if errUnmarshal := json.Unmarshal(data, &list); errUnmarshal != nil {
+				if errUnmarshalReq := json.Unmarshal(data, &reqBody); errUnmarshalReq == nil {
+					list = reqBody.Bookmarks
+				}
+			}
+		}
+		if list == nil {
+			list = []map[string]interface{}{}
+		}
+		SaveBookmarks(list)
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "success",
+			"bookmarks": list,
+		})
+		return
+	}
+
+	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
 func LoadSavedOutputDir() string {
 	cfg := LoadConfig()
 	if cfg.LastOutputDir != "" {

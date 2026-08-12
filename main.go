@@ -155,6 +155,7 @@ func main() {
 	mux.HandleFunc("/api/cancel", server.HandleCancelDownload)
 	mux.HandleFunc("/api/benchmark", server.HandleBenchmark)
 	mux.HandleFunc("/api/bot-config", server.HandleBotConfig)
+	mux.HandleFunc("/api/bookmarks", server.HandleBookmarks)
 	mux.HandleFunc("/api/events", server.HandleSSE)
 
 	if distFS != nil {
