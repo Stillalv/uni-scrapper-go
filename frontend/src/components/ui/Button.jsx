@@ -42,7 +42,7 @@ export default function Button({
       ) : Icon ? (
         <Icon className={size === 'sm' ? 'w-3.5 h-3.5 shrink-0' : 'w-4 h-4 shrink-0'} />
       ) : null}
-      <span>{children}</span>
+      {children}
     </button>
   );
 }

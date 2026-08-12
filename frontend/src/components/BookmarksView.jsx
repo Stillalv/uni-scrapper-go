@@ -70,7 +70,7 @@ export default function BookmarksView({
       </div>
 
       {/* Catalog Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--border-color)]">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--border-color)]">
         <span className="text-xs font-medium opacity-50 flex items-center gap-1 shrink-0 mr-1">
           <Filter className="w-3.5 h-3.5" /> Catalog:
         </span>
@@ -78,20 +78,27 @@ export default function BookmarksView({
           const count = getCatalogCount(cat.id);
           const isActive = activeCatalogFilter === cat.id;
           return (
-            <Button
+            <button
               key={cat.id}
-              variant={isActive ? 'primary' : 'ghost'}
-              size="sm"
+              type="button"
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className="!h-8 !px-3 shrink-0"
+              className={`h-8.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shrink-0 select-none border ${
+                isActive
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
             >
               {cat.flag && <span className={`fi ${cat.flag} rounded-[2px] shadow-sm w-4 h-3 shrink-0`}></span>}
               {cat.logo && <img src={cat.logo} alt={cat.label} className="w-4 h-4 object-contain shrink-0" />}
-              <span>{cat.label}</span>
-              <span className={`text-[11px] font-medium opacity-80 ${isActive ? 'text-white/80' : 'text-[var(--text-sub)]'}`}>
+              <span className="truncate">{cat.label}</span>
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5 ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-[var(--text-sub)]'
+                }`}
+              >
                 {count}
               </span>
-            </Button>
+            </button>
           );
         })}
       </div>
