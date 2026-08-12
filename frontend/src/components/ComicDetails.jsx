@@ -71,8 +71,8 @@ export default function ComicDetails({
               <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{webtoonInfo.TotalEpisodes} Chapters</strong> ({webtoonInfo.EpisodeRange})</span>
             </div>
           </div>
-          <span className="text-[9px] px-2 py-1 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider border border-blue-500/20 flex items-center gap-1 shrink-0">
-            <CheckCircle className="w-3 h-3" /> Validated
+          <span className="text-xs text-emerald-500 font-medium flex items-center gap-1 shrink-0">
+            <CheckCircle className="w-3.5 h-3.5" /> Validated
           </span>
         </div>
       )}

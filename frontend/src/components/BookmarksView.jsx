@@ -38,40 +38,36 @@ export default function BookmarksView({
   return (
     <div className="space-y-6">
       {/* Header Banner */}
-      <div className="glass-card rounded-2xl p-6 border border-[var(--border-color)] shadow-md flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-pink-600/10 text-pink-600 dark:text-pink-400 flex items-center justify-center border border-pink-500/20">
-              <Heart className="w-5 h-5 fill-current" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold tracking-tight">Bookmarked Comics</h1>
-              <p className="text-xs opacity-60">Your saved collection categorized by catalog provider</p>
-            </div>
+      <div className="glass-card rounded-2xl p-5 border border-[var(--border-color)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <Heart className="w-5 h-5 text-pink-500 fill-current shrink-0" />
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Bookmarked Comics</h1>
+            <p className="text-xs opacity-60">Your saved collection categorized by catalog provider</p>
           </div>
         </div>
 
         {/* Search Bar & Total Counter */}
         <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none" />
             <input
               type="text"
               placeholder="Search bookmarks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-black/5 dark:bg-white/5 border border-[var(--border-color)] focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full pl-9 pr-4 py-1.5 rounded-xl text-xs bg-black/5 dark:bg-white/5 border border-[var(--border-color)] focus:outline-none focus:border-blue-500 transition-all"
             />
           </div>
-          <span className="text-xs font-mono font-bold bg-pink-600/10 text-pink-600 dark:text-pink-400 px-3 py-2 rounded-xl border border-pink-500/20 shrink-0">
-            {bookmarks.length} Saved
+          <span className="text-xs text-[var(--text-sub)] opacity-60 font-medium shrink-0">
+            {bookmarks.length} saved
           </span>
         </div>
       </div>
 
       {/* Catalog Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--border-color)]">
-        <span className="text-xs font-semibold opacity-40 flex items-center gap-1 shrink-0 mr-1">
+        <span className="text-xs font-medium opacity-50 flex items-center gap-1 shrink-0 mr-1">
           <Filter className="w-3.5 h-3.5" /> Catalog:
         </span>
         {catalogOptions.map((cat) => {
@@ -81,7 +77,7 @@ export default function BookmarksView({
             <button
               key={cat.id}
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-2 border ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 flex items-center gap-2 border ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] opacity-60 hover:opacity-100'
@@ -89,8 +85,8 @@ export default function BookmarksView({
             >
               <span>{cat.label}</span>
               <span
-                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 opacity-80'
+                className={`text-[11px] font-medium opacity-80 ${
+                  isActive ? 'text-white/80' : 'text-[var(--text-sub)]'
                 }`}
               >
                 {count}
@@ -114,7 +110,7 @@ export default function BookmarksView({
             return (
               <div
                 key={comic.id || comic.title_no || comic.url}
-                className="glass-card rounded-2xl p-4 border border-[var(--border-color)] shadow-md hover:border-blue-500/50 transition-all flex flex-col justify-between group space-y-3"
+                className="glass-card rounded-2xl p-4 border border-[var(--border-color)] shadow-sm hover:border-blue-500/50 transition-all flex flex-col justify-between group space-y-3"
               >
                 {/* Cover Image & Info Header */}
                 <div className="flex items-start gap-3">
@@ -137,17 +133,15 @@ export default function BookmarksView({
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-mono font-bold bg-blue-600/10 text-blue-600 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-600/20 truncate">
-                        {sourceLabel}
-                      </span>
+                    <div className="text-[11px] text-[var(--text-sub)] opacity-70 truncate font-medium">
+                      {sourceLabel}
                     </div>
 
-                    <h3 className="text-xs font-bold tracking-tight leading-snug line-clamp-2 title-hover group-hover:text-blue-500 transition-colors" title={comic.title}>
+                    <h3 className="text-xs font-semibold tracking-tight leading-snug line-clamp-2 title-hover group-hover:text-blue-500 transition-colors" title={comic.title}>
                       {comic.title}
                     </h3>
 
-                    <p className="text-[10px] opacity-60 truncate">
+                    <p className="text-[11px] opacity-50 truncate">
                       {comic.genre || 'Comic'}
                     </p>
                   </div>

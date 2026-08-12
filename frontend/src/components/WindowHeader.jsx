@@ -52,9 +52,7 @@ export default function WindowHeader({
         <div className="flex items-center gap-2">
           <LayersTwo className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <span className="font-semibold text-[13px] tracking-tight">Webtoon Scraper</span>
-          <span className="text-[9px] px-2 py-0.5 rounded-full bg-blue-600/10 text-blue-600 dark:text-blue-400 font-semibold uppercase tracking-wider border border-blue-500/20">
-            Pro v2.0
-          </span>
+          <span className="text-[11px] text-[var(--text-sub)] opacity-50 font-normal ml-0.5">v2.0</span>
         </div>
       </div>
 
