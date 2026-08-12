@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -148,6 +149,20 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 	return info, episodes, nil
 }
 
+var fastPageClient = &http.Client{
+	Timeout: 4 * time.Second,
+	Transport: &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   3 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 50,
+		IdleConnTimeout:     30 * time.Second,
+		TLSHandshakeTimeout: 3 * time.Second,
+	},
+}
+
 type webtoonPageResult struct {
 	Episodes []model.Episode
 	MaxPage  int
@@ -175,11 +190,12 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 	req.Header.Set("Referer", "https://www.webtoons.com/")
 	req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
 
-	resp, err := utils.HTTPClient.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		if resp != nil {
-			resp.Body.Close()
-		}
+	resp, err := fastPageClient.Do(req)
+	if err != nil {
+		return webtoonPageResult{}, err
+	}
+	if resp.StatusCode != 200 {
+		resp.Body.Close()
 		return webtoonPageResult{}, fmt.Errorf("HTTP error for page %d", page)
 	}
 
@@ -253,67 +269,53 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	var mu sync.Mutex
 	baseURL, _ := url.Parse(listURL)
 
-	// Fetch Page 1 first
+	// Step 1: Fetch Master Page (Page 1)
 	p1Res, err := fetchWebtoonEpisodePage(listURL, 1, baseURL, utils.GetRandomUserAgent(1))
 	if err != nil || len(p1Res.Episodes) == 0 {
 		return nil, err
 	}
 
+	maxEpNo := 0
 	for _, ep := range p1Res.Episodes {
 		epMap[ep.EpisodeNo] = ep
+		if ep.EpisodeNo > maxEpNo {
+			maxEpNo = ep.EpisodeNo
+		}
 	}
 
-	knownMaxPage := p1Res.MaxPage
-	fetchedPages := make(map[int]bool)
-	fetchedPages[1] = true
+	// Calculate total estimated pages from latest episode number on Page 1 (10 eps per page)
+	totalEstimatedPages := (maxEpNo / 10) + 1
+	if maxEpNo%10 != 0 {
+		totalEstimatedPages = (maxEpNo / 10) + 2
+	}
+	if p1Res.MaxPage > totalEstimatedPages {
+		totalEstimatedPages = p1Res.MaxPage
+	}
 
-	// High-speed 32-worker concurrency pool for episode scanning
+	// Step 2: Instant Single-Batch Parallel Fetching for ALL remaining pages
+	var wg sync.WaitGroup
 	sem := make(chan struct{}, 32)
 
-	for {
-		var pagesToFetch []int
-		for p := 2; p <= knownMaxPage; p++ {
-			if !fetchedPages[p] {
-				pagesToFetch = append(pagesToFetch, p)
+	for p := 2; p <= totalEstimatedPages; p++ {
+		wg.Add(1)
+		go func(pNum int) {
+			defer wg.Done()
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			ua := utils.GetRandomUserAgent(pNum)
+			var res webtoonPageResult
+			var fetchErr error
+
+			for attempt := 0; attempt < 3; attempt++ {
+				res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL, ua)
+				if fetchErr == nil && len(res.Episodes) > 0 {
+					break
+				}
+				time.Sleep(50 * time.Millisecond)
 			}
-		}
 
-		if len(pagesToFetch) == 0 {
-			break
-		}
-
-		var wg sync.WaitGroup
-		var batchMaxPage int = knownMaxPage
-		var batchHasNext bool = false
-		var batchMu sync.Mutex
-
-		for _, pageNo := range pagesToFetch {
-			fetchedPages[pageNo] = true
-			wg.Add(1)
-			go func(pNum int) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-
-				// Automatic retry up to 5 times with exponential backoff + randomized User-Agents
-				var res webtoonPageResult
-				var fetchErr error
-				ua := utils.GetRandomUserAgent(pNum)
-
-				for attempt := 0; attempt < 5; attempt++ {
-					if attempt > 0 {
-						time.Sleep(time.Duration(100*attempt) * time.Millisecond)
-					}
-					res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL, ua)
-					if fetchErr == nil && len(res.Episodes) > 0 {
-						break
-					}
-				}
-
-				if len(res.Episodes) == 0 {
-					return
-				}
-
+			if len(res.Episodes) > 0 {
 				mu.Lock()
 				for _, ep := range res.Episodes {
 					if _, exists := epMap[ep.EpisodeNo]; !exists {
@@ -321,26 +323,11 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 					}
 				}
 				mu.Unlock()
-
-				batchMu.Lock()
-				if res.MaxPage > batchMaxPage {
-					batchMaxPage = res.MaxPage
-				}
-				if res.HasNext {
-					batchHasNext = true
-				}
-				batchMu.Unlock()
-			}(pageNo)
-		}
-
-		wg.Wait()
-
-		if batchMaxPage > knownMaxPage {
-			knownMaxPage = batchMaxPage
-		} else if !batchHasNext {
-			break
-		}
+			}
+		}(p)
 	}
+
+	wg.Wait()
 
 	episodes := make([]model.Episode, 0, len(epMap))
 	for _, ep := range epMap {
