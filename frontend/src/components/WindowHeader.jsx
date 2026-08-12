@@ -58,28 +58,30 @@ export default function WindowHeader({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 text-xs" style={{ WebkitAppRegion: 'no-drag', appRegion: 'no-drag' }} data-no-drag>
+      <div className="flex items-center gap-3 text-xs" style={{ WebkitAppRegion: 'no-drag', appRegion: 'no-drag' }} data-no-drag>
         <button
           onClick={onToggleTheme}
-          className="h-7 px-2 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 transition-all active:scale-95 flex items-center gap-1.5 font-medium text-[var(--text-sub)]"
+          className="flex items-center gap-1.5 text-[var(--text-sub)] hover:text-[var(--text-primary)] transition-colors active:scale-95"
           title={`Switch to ${theme === 'dark' ? 'Light Mode (Apple macOS)' : 'Dark Mode'}`}
         >
-          {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />}
-          <span className="hidden sm:inline text-[10px] uppercase tracking-wider">{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          {theme === 'dark' ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-indigo-500" />}
+          <span className="hidden sm:inline text-[10px] uppercase tracking-wider font-medium">{theme === 'dark' ? 'Light' : 'Dark'}</span>
         </button>
+
+        <span className="w-px h-4 bg-[var(--border-color)]"></span>
 
         <div
           onClick={onSelectFolder}
-          className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 border border-transparent text-[var(--text-sub)] max-w-[260px] truncate cursor-pointer transition-all group"
+          className="flex items-center gap-1.5 text-[var(--text-sub)] hover:text-[var(--text-primary)] max-w-[260px] truncate cursor-pointer transition-colors"
           title="Click to Choose Output Directory (Open Folder Dialog)"
         >
-          <Folder className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+          <Folder className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0" />
           <span className="truncate text-[11px]">{outputDir || "Select directory..."}</span>
         </div>
 
         <button
           onClick={onOpenFolder}
-          className="h-7 w-7 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-[var(--text-sub)] transition-all active:scale-95"
+          className="flex items-center justify-center text-[var(--text-sub)] hover:text-[var(--text-primary)] transition-colors active:scale-95"
           title="Open Current Output Directory in Windows File Explorer"
         >
           <FolderTwo className="w-3.5 h-3.5" />
@@ -92,7 +94,9 @@ export default function WindowHeader({
           Select Directory
         </button>
 
-        <div className="flex items-center gap-1.5 pl-2 border-l border-[var(--border-color)]">
+        <span className="w-px h-4 bg-[var(--border-color)]"></span>
+
+        <div className="flex items-center gap-1.5">
           <span className={`w-1.5 h-1.5 rounded-full ${serverStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`}></span>
           <span className="text-[9px] uppercase tracking-wider font-semibold text-[var(--text-sub)]">
             {serverStatus === 'online' ? 'Online' : 'Connecting'}
