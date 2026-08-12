@@ -63,14 +63,27 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 		logCb(fmt.Sprintf("Resolving LINE Webtoon: %s", listURL))
 	}
 
-	req, err := http.NewRequest("GET", listURL, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
-	req.Header.Set("Referer", "https://www.webtoons.com/")
+	var resp *http.Response
+	var err error
+	for attempt := 0; attempt < 3; attempt++ {
+		req, reqErr := http.NewRequest("GET", listURL, nil)
+		if reqErr != nil {
+			return nil, nil, reqErr
+		}
+		req.Header.Set("User-Agent", utils.GetRandomUserAgent(attempt))
+		req.Header.Set("Referer", "https://www.webtoons.com/")
+		req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
 
-	resp, err := utils.HTTPClient.Do(req)
+		resp, err = fastPageClient.Do(req)
+		if err == nil && resp.StatusCode == 200 {
+			break
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	if err != nil {
 		return nil, nil, err
 	}

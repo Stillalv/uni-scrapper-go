@@ -181,7 +181,7 @@ export default function App() {
     eventSource.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        if (payload.type === 'PROGRESS_UPDATE') {
+        if (payload.type === 'PROGRESS_UPDATE' || payload.type === 'SCANNING') {
           setDownloadProgress(payload.data);
           if (payload.data.activeWorkers) {
             setActiveWorkers(payload.data.activeWorkers);
@@ -318,7 +318,16 @@ export default function App() {
   const handleStartDownload = async () => {
     if (!webtoonInfo) return;
     setIsDownloading(true);
-    setDownloadProgress(null);
+    setDownloadProgress({
+      status: `Initializing scan for chapters (${chapterRange})...`,
+      percentage: 0,
+      downloadedImages: 0,
+      totalImages: 0,
+      currentChapter: 0,
+      totalChapters: 0,
+      currentImage: 0,
+      chapterTotalImages: 0,
+    });
     try {
       const res = await fetch('/api/download', {
         method: 'POST',

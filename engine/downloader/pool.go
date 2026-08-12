@@ -30,7 +30,7 @@ type chapterScanResult struct {
 }
 
 // extractImageURLs fetches a chapter viewer page and extracts all image URLs
-func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
+func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, bool, error) {
 	if strings.Contains(viewerURL, "mangaplus.shueisha.co.jp") {
 		chID := mangaplus.ExtractChapterIDFromURL(viewerURL)
 		urls, keys, err := mangaplus.FetchChapterPages(chID)
@@ -40,14 +40,32 @@ func extractImageURLs(viewerURL string) ([]string, []string, bool, error) {
 		return urls, keys, false, nil
 	}
 
-	req, err := http.NewRequest("GET", viewerURL, nil)
-	if err != nil {
-		return nil, nil, false, err
+	if userAgent == "" {
+		userAgent = utils.DefaultHeaders["User-Agent"]
 	}
-	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
-	req.Header.Set("Referer", "https://www.webtoons.com/")
 
-	resp, err := utils.HTTPClient.Do(req)
+	var resp *http.Response
+	var err error
+
+	for attempt := 0; attempt < 3; attempt++ {
+		req, reqErr := http.NewRequest("GET", viewerURL, nil)
+		if reqErr != nil {
+			return nil, nil, false, reqErr
+		}
+		req.Header.Set("User-Agent", userAgent)
+		req.Header.Set("Referer", "https://www.webtoons.com/")
+		req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
+
+		resp, err = utils.FastHTTPClient.Do(req)
+		if err == nil && resp.StatusCode == 200 {
+			break
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -370,7 +388,8 @@ func DownloadEpisodesWithGranularProgress(
 				}
 
 				ep := selected[chIdx]
-				imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL)
+				ua := utils.GetRandomUserAgent(chIdx)
+				imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL, ua)
 				if err == nil && len(imageURLs) > 0 {
 					scannedChapters[chIdx].ImageURLs = imageURLs
 					scannedChapters[chIdx].EncryptionKeys = keys
