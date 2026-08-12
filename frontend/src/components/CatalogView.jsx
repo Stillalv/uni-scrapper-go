@@ -222,22 +222,16 @@ export default function CatalogView({
                         <Heart className="w-3.5 h-3.5 fill-current" />
                       </button>
                     )}
-
-                    <div className="absolute top-1.5 left-1.5 right-1.5 flex items-center justify-between pointer-events-none">
-                      <span className="text-[8px] px-1.5 py-0.5 rounded bg-black/60 dark:bg-black/70 backdrop-blur-md text-white font-semibold uppercase tracking-wider border border-white/10 truncate max-w-[70%]">
-                        {displayGenre}
-                      </span>
-                    </div>
                   </div>
 
-                  {/* Title & Author below poster */}
-                  <div className="px-0.5">
-                    <h3 className="text-xs font-bold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight" title={comic.title}>
+                  {/* Title, Author & Genre below poster */}
+                  <div className="px-0.5 space-y-0.5">
+                    <h3 className="text-xs font-semibold truncate group-hover:text-blue-500 transition-colors leading-tight" title={comic.title}>
                       {comic.title}
                     </h3>
-                    {comic.author && (
-                      <p className="text-[10px] opacity-60 truncate mt-0.5">{comic.author}</p>
-                    )}
+                    <p className="text-[11px] text-[var(--text-sub)] opacity-60 truncate font-medium">
+                      {comic.author ? `${comic.author} • ${displayGenre}` : displayGenre}
+                    </p>
                   </div>
                 </div>
 
