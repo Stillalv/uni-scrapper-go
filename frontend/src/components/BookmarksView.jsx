@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, BookOpen, Trash, Search, ExternalLink, LayersTwo, Sparkles, Filter } from '@mynaui/icons-react';
+import webtoonLogo from '../assets/logo/WEBTOON_Logo.png';
+import mangaplusLogo from '../assets/logo/mangaplus.png';
 
 export default function BookmarksView({
   bookmarks = [],
@@ -13,9 +15,9 @@ export default function BookmarksView({
 
   const catalogOptions = [
     { id: 'all', label: 'All Catalogs' },
-    { id: 'webtoon_id', label: 'Webtoon (ID)' },
-    { id: 'webtoon_en', label: 'Webtoon (EN)' },
-    { id: 'mangaplus_id', label: 'MANGA Plus (ID)' },
+    { id: 'webtoon_id', label: 'Webtoon (ID)', flag: 'fi-id', logo: webtoonLogo },
+    { id: 'webtoon_en', label: 'Webtoon (EN)', flag: 'fi-gb', logo: webtoonLogo },
+    { id: 'mangaplus_id', label: 'MANGA Plus (ID)', flag: 'fi-id', logo: mangaplusLogo },
   ];
 
   // Count bookmarks per catalog
@@ -77,15 +79,17 @@ export default function BookmarksView({
             <button
               key={cat.id}
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 flex items-center gap-2 border ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 border ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
                   : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] opacity-60 hover:opacity-100'
               }`}
             >
+              {cat.flag && <span className={`fi ${cat.flag} rounded-sm shrink-0`}></span>}
+              {cat.logo && <img src={cat.logo} alt={cat.label} className="w-3.5 h-3.5 object-contain shrink-0" />}
               <span>{cat.label}</span>
               <span
-                className={`text-[11px] font-medium opacity-80 ${
+                className={`text-[11px] font-medium opacity-80 ml-0.5 ${
                   isActive ? 'text-white/80' : 'text-[var(--text-sub)]'
                 }`}
               >
@@ -100,8 +104,11 @@ export default function BookmarksView({
       {filteredBookmarks.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredBookmarks.map((comic) => {
+            const isMangaPlus = comic.source === 'mangaplus_id';
+            const sourceLogo = isMangaPlus ? mangaplusLogo : webtoonLogo;
+            const flagClass = comic.source === 'webtoon_en' ? 'fi-gb' : 'fi-id';
             const sourceLabel =
-              comic.source === 'mangaplus_id'
+              isMangaPlus
                 ? 'MANGA Plus (ID)'
                 : comic.source === 'webtoon_en'
                 ? 'Webtoon (EN)'
@@ -114,27 +121,28 @@ export default function BookmarksView({
               >
                 {/* Cover Image & Info Header */}
                 <div className="flex items-start gap-3">
-                  <div className="relative w-16 h-20 shrink-0 rounded-xl overflow-hidden bg-black/10 dark:bg-white/10 border border-[var(--border-color)]">
+                  <div className="relative w-16 h-20 shrink-0 rounded-xl overflow-hidden bg-black/10 dark:bg-white/5 border border-[var(--border-color)] flex items-center justify-center p-1">
                     {comic.cover ? (
                       <img
                         src={comic.cover}
                         alt={comic.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300 rounded-lg"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://via.placeholder.com/150?text=Comic';
+                          e.target.src = sourceLogo;
+                          e.target.className = 'w-8 h-8 object-contain opacity-40';
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center opacity-30 text-xs font-bold font-mono">
-                        N/A
-                      </div>
+                      <img src={sourceLogo} alt={comic.title} className="w-8 h-8 object-contain opacity-40" />
                     )}
                   </div>
 
                   <div className="min-w-0 flex-1 space-y-1">
-                    <div className="text-[11px] text-[var(--text-sub)] opacity-70 truncate font-medium">
-                      {sourceLabel}
+                    <div className="text-[11px] text-[var(--text-sub)] opacity-70 truncate font-medium flex items-center gap-1.5">
+                      <span className={`fi ${flagClass} rounded-sm shrink-0`}></span>
+                      <img src={sourceLogo} alt={sourceLabel} className="w-3 h-3 object-contain shrink-0" />
+                      <span className="truncate">{sourceLabel}</span>
                     </div>
 
                     <h3 className="text-xs font-semibold tracking-tight leading-snug line-clamp-2 title-hover group-hover:text-blue-500 transition-colors" title={comic.title}>

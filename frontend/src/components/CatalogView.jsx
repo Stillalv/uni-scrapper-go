@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Refresh, BookOpen, LayoutDashboard, List, ArrowRight, Heart } from '@mynaui/icons-react';
+import webtoonLogo from '../assets/logo/WEBTOON_Logo.png';
+import mangaplusLogo from '../assets/logo/mangaplus.png';
 
 export default function CatalogView({
   catalog,
@@ -39,13 +41,15 @@ export default function CatalogView({
     );
   });
 
+  const activeLogo = selectedSource === 'mangaplus_id' ? mangaplusLogo : webtoonLogo;
+
   return (
     <div className="space-y-6 max-w-6xl mx-auto py-2 select-none">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
-            <BookOpen className="w-4.5 h-4.5" style={{ width: 18, height: 18 }} />
+          <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)] p-1.5 flex items-center justify-center shrink-0">
+            <img src={activeLogo} alt="Catalog Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <h2 className="text-lg font-bold tracking-tight">Comic Catalog ({selectedSource === 'mangaplus_id' ? 'MANGA Plus Indonesia' : 'LINE Webtoon'})</h2>
@@ -58,27 +62,33 @@ export default function CatalogView({
           <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)] text-xs">
             <button
               onClick={() => onChangeSource ? onChangeSource('webtoon', 'id') : onChangeLang('id')}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
+              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                 selectedSource === 'webtoon' && selectedLang === 'id' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
               }`}
             >
-              🇮🇩 Webtoon (ID)
+              <span className="fi fi-id rounded-sm shrink-0"></span>
+              <img src={webtoonLogo} alt="Webtoon" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>Webtoon (ID)</span>
             </button>
             <button
               onClick={() => onChangeSource ? onChangeSource('mangaplus_id', 'id') : null}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
+              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                 selectedSource === 'mangaplus_id' ? 'bg-red-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
               }`}
             >
-              🔴 MANGA Plus (ID)
+              <span className="fi fi-id rounded-sm shrink-0"></span>
+              <img src={mangaplusLogo} alt="MANGA Plus" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>MANGA Plus (ID)</span>
             </button>
             <button
               onClick={() => onChangeSource ? onChangeSource('webtoon', 'en') : onChangeLang('en')}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all ${
+              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
                 selectedSource === 'webtoon' && selectedLang === 'en' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
               }`}
             >
-              🇬🇧 Webtoon (EN)
+              <span className="fi fi-gb rounded-sm shrink-0"></span>
+              <img src={webtoonLogo} alt="Webtoon" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span>Webtoon (EN)</span>
             </button>
           </div>
 
@@ -166,24 +176,25 @@ export default function CatalogView({
               >
                 <div>
                   {/* Poster Cover Container */}
-                  <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-black/30 mb-2 group/cover border border-white/5">
-                    {comic.cover_url ? (
-                      <img
-                        src={`/api/proxy-image?url=${encodeURIComponent(comic.cover_url)}`}
-                        alt={comic.title}
-                        loading="lazy"
-                        className="w-full h-full object-cover group-hover/cover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center opacity-40">
-                        <BookOpen className="w-6 h-6 mb-1" />
-                        <span className="text-[9px] uppercase tracking-wider font-semibold">{comic.genre || 'Webtoon'}</span>
-                      </div>
-                    )}
+                    <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-black/10 dark:bg-white/5 mb-2 group/cover border border-[var(--border-color)]">
+                      {comic.cover_url ? (
+                        <img
+                          src={`/api/proxy-image?url=${encodeURIComponent(comic.cover_url)}`}
+                          alt={comic.title}
+                          loading="lazy"
+                          className="w-full h-full object-cover group-hover/cover:scale-105 transition-transform duration-300"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = activeLogo;
+                            e.target.className = 'w-full h-full object-contain p-4 opacity-40';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center opacity-40">
+                          <img src={activeLogo} alt={comic.title} className="w-10 h-10 object-contain mb-1" />
+                          <span className="text-[9px] uppercase tracking-wider font-semibold">{comic.genre || 'Comic'}</span>
+                        </div>
+                      )}
 
                     {/* Bookmark Toggle Button Overlay */}
                     {onToggleBookmark && (
