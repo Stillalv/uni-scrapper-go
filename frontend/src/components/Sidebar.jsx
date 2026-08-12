@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpen, LayersTwo, ClockWaves, FineTune, Wrench, Sparkles, CheckCircle, ChevronLeft, ChevronRight } from '@mynaui/icons-react';
+import { BookOpen, LayersTwo, ClockWaves, FineTune, Wrench, Sparkles, CheckCircle, ChevronLeft, ChevronRight, Heart } from '@mynaui/icons-react';
 
 export default function Sidebar({
   isOpen,
@@ -7,10 +7,12 @@ export default function Sidebar({
   activeTab,
   setActiveTab,
   selectedComic,
-  outputDir
+  outputDir,
+  bookmarkCount = 0
 }) {
   const menuItems = [
     { id: 'catalog', label: 'Catalog Explorer', icon: BookOpen, badge: 'Gallery' },
+    { id: 'bookmarks', label: 'Bookmarked Comics', icon: Heart, badge: bookmarkCount > 0 ? `${bookmarkCount}` : null },
     { id: 'scraper', label: 'Scraper Dashboard', icon: LayersTwo, badge: 'Download' },
     { id: 'history', label: 'Download History', icon: ClockWaves },
     { id: 'settings', label: 'System Preferences', icon: FineTune },

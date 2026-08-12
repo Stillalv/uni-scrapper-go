@@ -9,10 +9,11 @@ import SettingsView from './components/SettingsView';
 import HistoryView from './components/HistoryView';
 import ToolsView from './components/ToolsView';
 import CatalogView from './components/CatalogView';
+import BookmarksView from './components/BookmarksView';
 
 export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog', 'scraper', 'history', 'settings', 'tools'
+  const [activeTab, setActiveTab] = useState('catalog'); // 'catalog', 'bookmarks', 'scraper', 'history', 'settings', 'tools'
 
   const [catalog, setCatalog] = useState([]);
   const [loadingCatalog, setLoadingCatalog] = useState(false);
@@ -20,6 +21,52 @@ export default function App() {
   const [selectedSource, setSelectedSource] = useState('webtoon');
   const [selectedComic, setSelectedComic] = useState(null);
   
+  const [bookmarks, setBookmarks] = useState(() => {
+    try {
+      const saved = localStorage.getItem('webtoon_bookmarks_v1');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const saveBookmarks = (newList) => {
+    const safeList = Array.isArray(newList) ? newList : [];
+    setBookmarks(safeList);
+    try {
+      localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(safeList));
+    } catch (e) {}
+  };
+
+  const handleToggleBookmark = (comic) => {
+    if (!comic) return;
+    const comicID = String(comic.id || comic.title_no || comic.TitleNo || comic.url);
+    const exists = bookmarks.some((b) => String(b.id || b.title_no || b.TitleNo || b.url) === comicID);
+
+    if (exists) {
+      const updated = bookmarks.filter((b) => String(b.id || b.title_no || b.TitleNo || b.url) !== comicID);
+      saveBookmarks(updated);
+      addToast('Bookmark Removed', `Removed '${comic.title || comic.Title}' from bookmarks.`, 'info');
+    } else {
+      const source = comic.source || selectedSource || 'webtoon_id';
+      const newBookmark = {
+        id: comicID,
+        title_no: comic.title_no || comic.TitleNo || comicID,
+        title: comic.title || comic.Title,
+        genre: comic.genre || comic.Genre || 'Comic',
+        author: comic.author || comic.Author || '',
+        cover: comic.cover || comic.cover_url || comic.CoverURL || '',
+        url: comic.url || comic.ListURL || comicUrl,
+        source: source,
+        addedAt: Date.now(),
+      };
+      const updated = [newBookmark, ...bookmarks];
+      saveBookmarks(updated);
+      addToast('Bookmark Saved', `Added '${newBookmark.title}' to bookmarks!`, 'success');
+    }
+  };
+
   const [comicUrl, setComicUrl] = useState('');
   const [webtoonInfo, setWebtoonInfo] = useState(null);
   const [checkingInfo, setCheckingInfo] = useState(false);
@@ -385,6 +432,7 @@ export default function App() {
           setActiveTab={setActiveTab}
           selectedComic={selectedComic}
           outputDir={outputDir}
+          bookmarkCount={bookmarks.length}
         />
 
         {/* Workspace Main Panel */}
@@ -407,6 +455,18 @@ export default function App() {
               onReloadCatalog={(refresh) => loadCatalog(selectedLang, selectedSource, refresh)}
               selectedComic={selectedComic}
               onSelectComic={handleSelectComic}
+              onNavigateScraper={() => setActiveTab('scraper')}
+              bookmarks={bookmarks}
+              onToggleBookmark={handleToggleBookmark}
+            />
+          )}
+
+          {activeTab === 'bookmarks' && (
+            <BookmarksView
+              bookmarks={bookmarks}
+              onRemoveBookmark={handleToggleBookmark}
+              onSelectComic={handleSelectComic}
+              onNavigateCatalog={() => setActiveTab('catalog')}
               onNavigateScraper={() => setActiveTab('scraper')}
             />
           )}
