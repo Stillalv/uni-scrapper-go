@@ -95,42 +95,13 @@
   outline: none;
 }
 
-/* Keep white check/label on selected AppleSelect row in light theme */
+/* Keep white check/label on selected AppleSelect row and primary buttons in light theme */
 .light-theme .bg-blue-600.text-white,
-.light-theme button.bg-blue-600 {
+.light-theme .bg-red-600.text-white,
+.light-theme button.bg-blue-600,
+.light-theme button.bg-red-600,
+.light-theme .bg-pink-600.text-white {
   color: #ffffff !important;
-}
-
-/* Light mode text contrast overrides for tailwind utility classes */
-.light-theme .text-white {
-  color: #1d1d1f !important;
-}
-.light-theme .text-white\/90 {
-  color: #1d1d1f !important;
-}
-.light-theme .text-white\/80 {
-  color: #333336 !important;
-}
-.light-theme .text-white\/70 {
-  color: #515154 !important;
-}
-.light-theme .text-white\/60 {
-  color: #6e6e73 !important;
-}
-.light-theme .text-white\/50 {
-  color: #6e6e73 !important;
-}
-.light-theme .text-white\/40 {
-  color: #86868b !important;
-}
-.light-theme .text-white\/30 {
-  color: #a1a1a6 !important;
-}
-.light-theme .text-white\/20 {
-  color: #c7c7cc !important;
-}
-.light-theme .text-white\/10 {
-  color: #e5e5ea !important;
 }
 
 /* Background overrides in light theme */
