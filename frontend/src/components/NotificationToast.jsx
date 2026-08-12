@@ -12,12 +12,12 @@ export default function NotificationToast({ toasts, onCloseToast }) {
         const isWarning = toast.type === 'warning';
 
         const tone = isSuccess
-          ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300'
+          ? 'border-emerald-500/30 bg-white/95 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-emerald-200 dark:border-emerald-500/40'
           : isError
-          ? 'border-rose-500/40 bg-rose-500/15 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'
+          ? 'border-rose-500/30 bg-white/95 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-rose-200 dark:border-rose-500/40'
           : isWarning
-          ? 'border-amber-500/40 bg-amber-500/15 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300'
-          : 'border-blue-500/40 bg-blue-500/15 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300';
+          ? 'border-amber-500/30 bg-white/95 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-amber-200 dark:border-amber-500/40'
+          : 'border-blue-500/30 bg-white/95 text-slate-900 shadow-xl dark:bg-slate-900/95 dark:text-blue-200 dark:border-blue-500/40';
 
         const iconTone = isSuccess
           ? 'text-emerald-600 dark:text-emerald-400'
@@ -30,7 +30,7 @@ export default function NotificationToast({ toasts, onCloseToast }) {
         return (
           <div
             key={toast.id}
-            className={`pointer-events-auto p-3 rounded-xl glass-panel shadow-2xl border flex items-start gap-3 transform transition-all duration-300 animate-slide-up ${tone}`}
+            className={`pointer-events-auto p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl border flex items-start gap-3 transform transition-all duration-300 animate-slide-up ${tone}`}
           >
             {isSuccess && <CheckCircle className={`w-5 h-5 shrink-0 mt-0.5 ${iconTone}`} />}
             {isError && <XCircle className={`w-5 h-5 shrink-0 mt-0.5 ${iconTone}`} />}
@@ -38,8 +38,8 @@ export default function NotificationToast({ toasts, onCloseToast }) {
             {!isSuccess && !isError && !isWarning && <Info className={`w-5 h-5 shrink-0 mt-0.5 ${iconTone}`} />}
 
             <div className="flex-1 min-w-0">
-              <h4 className="text-xs font-bold capitalize">{toast.title || 'Notifikasi'}</h4>
-              <p className="text-xs opacity-80 mt-0.5 leading-relaxed">{toast.message}</p>
+              <h4 className="text-xs font-bold">{toast.title || 'Notification'}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">{toast.message}</p>
             </div>
 
             <button
