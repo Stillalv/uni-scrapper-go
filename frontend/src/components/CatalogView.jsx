@@ -46,9 +46,9 @@ export default function CatalogView({
   return (
     <div className="space-y-6 max-w-6xl mx-auto py-2 select-none">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-[var(--border-color)]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)] p-1.5 flex items-center justify-center shrink-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[var(--border-color)]">
+        <div className="flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-xl bg-white dark:bg-white/10 border border-[var(--border-color)] p-1.5 flex items-center justify-center shrink-0 shadow-sm">
             <img src={activeLogo} alt="Catalog Logo" className="w-full h-full object-contain" />
           </div>
           <div>
@@ -58,36 +58,44 @@ export default function CatalogView({
         </div>
 
         {/* Language & Source Tabs */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)] text-xs">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+          <div className="flex items-center gap-1 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)] text-xs">
             <button
               onClick={() => onChangeSource ? onChangeSource('webtoon', 'id') : onChangeLang('id')}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
-                selectedSource === 'webtoon' && selectedLang === 'id' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+              className={`h-8 px-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                selectedSource === 'webtoon' && selectedLang === 'id'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
-              <span className="fi fi-id rounded-sm shrink-0"></span>
-              <img src={webtoonLogo} alt="Webtoon" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span className="fi fi-id rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
+              <img src={webtoonLogo} alt="Webtoon" className="w-4 h-4 object-contain shrink-0" />
               <span>Webtoon (ID)</span>
             </button>
+
             <button
               onClick={() => onChangeSource ? onChangeSource('mangaplus_id', 'id') : null}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
-                selectedSource === 'mangaplus_id' ? 'bg-red-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+              className={`h-8 px-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                selectedSource === 'mangaplus_id'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
-              <span className="fi fi-id rounded-sm shrink-0"></span>
-              <img src={mangaplusLogo} alt="MANGA Plus" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span className="fi fi-id rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
+              <img src={mangaplusLogo} alt="MANGA Plus" className="w-4 h-4 object-contain shrink-0" />
               <span>MANGA Plus (ID)</span>
             </button>
+
             <button
               onClick={() => onChangeSource ? onChangeSource('webtoon', 'en') : onChangeLang('en')}
-              className={`h-7 px-2.5 rounded-md font-semibold transition-all flex items-center gap-1.5 ${
-                selectedSource === 'webtoon' && selectedLang === 'en' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-60 hover:opacity-100'
+              className={`h-8 px-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                selectedSource === 'webtoon' && selectedLang === 'en'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
-              <span className="fi fi-gb rounded-sm shrink-0"></span>
-              <img src={webtoonLogo} alt="Webtoon" className="w-3.5 h-3.5 object-contain shrink-0" />
+              <span className="fi fi-gb rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
+              <img src={webtoonLogo} alt="Webtoon" className="w-4 h-4 object-contain shrink-0" />
               <span>Webtoon (EN)</span>
             </button>
           </div>
@@ -95,18 +103,18 @@ export default function CatalogView({
           <button
             onClick={() => onReloadCatalog(true)}
             disabled={loadingCatalog}
-            className="h-8 w-8 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-80 border border-[var(--border-color)] transition-all disabled:opacity-50 active:scale-95"
+            className="h-8.5 w-8.5 flex items-center justify-center rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-80 border border-[var(--border-color)] transition-all disabled:opacity-50 active:scale-95 shrink-0"
             title="Reload Catalog"
           >
-            <Refresh className={`w-3.5 h-3.5 ${loadingCatalog ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
+            <Refresh className={`w-4 h-4 ${loadingCatalog ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
           </button>
 
           <div className="h-4 w-px bg-[var(--border-color)]"></div>
 
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
+          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)] shrink-0">
             <button
               onClick={() => setViewMode('grid')}
-              className={`h-7 w-7 flex items-center justify-center rounded-md transition-all ${
+              className={`h-7 w-7 flex items-center justify-center rounded-lg transition-all ${
                 viewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-40 hover:opacity-100'
               }`}
             >
@@ -114,7 +122,7 @@ export default function CatalogView({
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`h-7 w-7 flex items-center justify-center rounded-md transition-all ${
+              className={`h-7 w-7 flex items-center justify-center rounded-lg transition-all ${
                 viewMode === 'list' ? 'bg-blue-600 text-white shadow-sm' : 'opacity-40 hover:opacity-100'
               }`}
             >

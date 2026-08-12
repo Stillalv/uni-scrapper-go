@@ -79,17 +79,17 @@ export default function BookmarksView({
             <button
               key={cat.id}
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 border ${
+              className={`h-8 px-3 rounded-lg text-xs font-semibold transition-all shrink-0 flex items-center gap-2 border ${
                 isActive
                   ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] opacity-60 hover:opacity-100'
+                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
               }`}
             >
-              {cat.flag && <span className={`fi ${cat.flag} rounded-sm shrink-0`}></span>}
-              {cat.logo && <img src={cat.logo} alt={cat.label} className="w-3.5 h-3.5 object-contain shrink-0" />}
+              {cat.flag && <span className={`fi ${cat.flag} rounded-[2px] shadow-sm w-4 h-3 shrink-0`}></span>}
+              {cat.logo && <img src={cat.logo} alt={cat.label} className="w-4 h-4 object-contain shrink-0" />}
               <span>{cat.label}</span>
               <span
-                className={`text-[11px] font-medium opacity-80 ml-0.5 ${
+                className={`text-[11px] font-medium opacity-80 ${
                   isActive ? 'text-white/80' : 'text-[var(--text-sub)]'
                 }`}
               >
