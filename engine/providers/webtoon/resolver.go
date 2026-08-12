@@ -154,7 +154,7 @@ type webtoonPageResult struct {
 	HasNext  bool
 }
 
-func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) (webtoonPageResult, error) {
+func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAgent string) (webtoonPageResult, error) {
 	targetURL := listURL
 	if page > 1 {
 		if strings.Contains(listURL, "?") {
@@ -168,8 +168,12 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL) (webtoo
 	if err != nil {
 		return webtoonPageResult{}, err
 	}
-	req.Header.Set("User-Agent", utils.DefaultHeaders["User-Agent"])
+	if userAgent == "" {
+		userAgent = utils.DefaultHeaders["User-Agent"]
+	}
+	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Referer", "https://www.webtoons.com/")
+	req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
 
 	resp, err := utils.HTTPClient.Do(req)
 	if err != nil || resp.StatusCode != 200 {
@@ -250,7 +254,7 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	baseURL, _ := url.Parse(listURL)
 
 	// Fetch Page 1 first
-	p1Res, err := fetchWebtoonEpisodePage(listURL, 1, baseURL)
+	p1Res, err := fetchWebtoonEpisodePage(listURL, 1, baseURL, utils.GetRandomUserAgent(1))
 	if err != nil || len(p1Res.Episodes) == 0 {
 		return nil, err
 	}
@@ -263,8 +267,8 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	fetchedPages := make(map[int]bool)
 	fetchedPages[1] = true
 
-	// Limit concurrent page fetches to 4 to prevent Webtoon CDN rate-limiting (HTTP 429)
-	sem := make(chan struct{}, 4)
+	// High-speed 32-worker concurrency pool for episode scanning
+	sem := make(chan struct{}, 32)
 
 	for {
 		var pagesToFetch []int
@@ -291,14 +295,16 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 				sem <- struct{}{}
 				defer func() { <-sem }()
 
-				// Automatic retry up to 3 times per episode page
+				// Automatic retry up to 5 times with exponential backoff + randomized User-Agents
 				var res webtoonPageResult
 				var fetchErr error
-				for attempt := 0; attempt < 3; attempt++ {
+				ua := utils.GetRandomUserAgent(pNum)
+
+				for attempt := 0; attempt < 5; attempt++ {
 					if attempt > 0 {
-						time.Sleep(100 * time.Millisecond)
+						time.Sleep(time.Duration(100*attempt) * time.Millisecond)
 					}
-					res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL)
+					res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL, ua)
 					if fetchErr == nil && len(res.Episodes) > 0 {
 						break
 					}
