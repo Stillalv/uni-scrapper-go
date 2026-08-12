@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"uni-scraper-go/engine/model"
@@ -262,6 +263,9 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	fetchedPages := make(map[int]bool)
 	fetchedPages[1] = true
 
+	// Limit concurrent page fetches to 4 to prevent Webtoon CDN rate-limiting (HTTP 429)
+	sem := make(chan struct{}, 4)
+
 	for {
 		var pagesToFetch []int
 		for p := 2; p <= knownMaxPage; p++ {
@@ -284,8 +288,23 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 			wg.Add(1)
 			go func(pNum int) {
 				defer wg.Done()
-				res, err := fetchWebtoonEpisodePage(listURL, pNum, baseURL)
-				if err != nil || len(res.Episodes) == 0 {
+				sem <- struct{}{}
+				defer func() { <-sem }()
+
+				// Automatic retry up to 3 times per episode page
+				var res webtoonPageResult
+				var fetchErr error
+				for attempt := 0; attempt < 3; attempt++ {
+					if attempt > 0 {
+						time.Sleep(100 * time.Millisecond)
+					}
+					res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL)
+					if fetchErr == nil && len(res.Episodes) > 0 {
+						break
+					}
+				}
+
+				if len(res.Episodes) == 0 {
 					return
 				}
 
