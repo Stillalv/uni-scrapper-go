@@ -47,7 +47,7 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 	var resp *http.Response
 	var err error
 
-	for attempt := 0; attempt < 3; attempt++ {
+	for attempt := 0; attempt < 5; attempt++ {
 		req, reqErr := http.NewRequest("GET", viewerURL, nil)
 		if reqErr != nil {
 			return nil, nil, false, reqErr
@@ -63,7 +63,7 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 		if resp != nil {
 			resp.Body.Close()
 		}
-		time.Sleep(50 * time.Millisecond)
+		time.Sleep(time.Duration(100*(1<<attempt)) * time.Millisecond)
 	}
 
 	if err != nil {
@@ -306,6 +306,9 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 			bodyBytes = mangaplus.XORDecrypt(bodyBytes, task.EncryptionKey)
 		}
 
+		dirPath := filepath.Dir(filePath)
+		_ = os.MkdirAll(dirPath, 0755)
+
 		err := os.WriteFile(filePath, bodyBytes, 0644)
 		if err == nil && len(bodyBytes) > 0 {
 			return true
@@ -350,7 +353,6 @@ func DownloadEpisodesWithGranularProgress(
 			folderName = utils.SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, ep.Title))
 		}
 		chapterDir := filepath.Join(targetBase, folderName)
-		_ = os.MkdirAll(chapterDir, 0755)
 
 		scannedChapters[chIdx] = chapterScanResult{
 			ChIdx:      chIdx,
@@ -570,6 +572,14 @@ func DownloadEpisodesWithGranularProgress(
 	}
 
 	wg.Wait()
+
+	// Automatic cleanup pass: Remove any chapter folders created that have 0 files inside
+	for _, scan := range scannedChapters {
+		if scan.ChapterDir != "" {
+			utils.RemoveEmptyDir(scan.ChapterDir)
+		}
+	}
+	utils.RemoveEmptyDir(targetBase)
 
 	if progressCb != nil && (cfg.StopRequested == nil || atomic.LoadInt32(cfg.StopRequested) == 0) {
 		workerMu.Lock()

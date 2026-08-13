@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"io"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -76,4 +78,26 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]model.Episode
 	}
 
 	return selected
+}
+
+// IsEmptyDir checks if a directory exists and contains 0 files/subdirectories.
+func IsEmptyDir(dirPath string) bool {
+	f, err := os.Open(dirPath)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+
+	names, err := f.Readdirnames(1)
+	if err != nil && err != io.EOF {
+		return false
+	}
+	return len(names) == 0
+}
+
+// RemoveEmptyDir removes a directory if it exists and is completely empty (0 files).
+func RemoveEmptyDir(dirPath string) {
+	if IsEmptyDir(dirPath) {
+		_ = os.Remove(dirPath)
+	}
 }
