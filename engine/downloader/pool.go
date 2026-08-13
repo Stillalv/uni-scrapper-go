@@ -224,6 +224,7 @@ func DownloadEpisodesWithGranularProgress(
 	_ = os.MkdirAll(targetBase, 0755)
 
 	totalCh := len(selected)
+	isMangaPlusSource := info != nil && strings.Contains(strings.ToLower(info.Source), "mangaplus")
 
 	scannedChapters := make([]chapterScanResult, totalCh)
 	var totalImages int32 = 0
@@ -249,16 +250,16 @@ func DownloadEpisodesWithGranularProgress(
 		}
 	}
 
-	scanWorkers := cfg.MaxWorkers
-	if scanWorkers < 8 {
+	// Chapter HTML viewer page scanning concurrency
+	// Limit to max 4-6 parallel workers to prevent Naver/Webtoon WAF 429 rate-limiting blocks
+	scanWorkers := 4
+	if isMangaPlusSource {
 		scanWorkers = 8
-	}
-	if scanWorkers > 32 {
-		scanWorkers = 32
 	}
 	if scanWorkers > totalCh {
 		scanWorkers = totalCh
 	}
+
 	scanChan := make(chan int, totalCh)
 	for i := 0; i < totalCh; i++ {
 		scanChan <- i
@@ -301,6 +302,32 @@ func DownloadEpisodesWithGranularProgress(
 		}()
 	}
 	scanWg.Wait()
+
+	// Automatic 2nd Retry Scan Pass: Recover any chapters that failed on 1st pass due to transient WAF drops
+	var missedChapterIndices []int
+	for chIdx, scan := range scannedChapters {
+		if len(scan.ImageURLs) == 0 {
+			missedChapterIndices = append(missedChapterIndices, chIdx)
+		}
+	}
+
+	if len(missedChapterIndices) > 0 && (cfg.StopRequested == nil || atomic.LoadInt32(cfg.StopRequested) == 0) {
+		time.Sleep(300 * time.Millisecond) // Grace period for WAF rate-limit reset
+		for _, chIdx := range missedChapterIndices {
+			if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
+				break
+			}
+			ep := selected[chIdx]
+			ua := utils.GetRandomUserAgent(chIdx + 77)
+			imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL, ua)
+			if err == nil && len(imageURLs) > 0 {
+				scannedChapters[chIdx].ImageURLs = imageURLs
+				scannedChapters[chIdx].EncryptionKeys = keys
+				scannedChapters[chIdx].HasBanner = hasBanner
+				atomic.AddInt32(&totalImages, int32(len(imageURLs)))
+			}
+		}
+	}
 
 	if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
 		return 0, totalCh, 0
