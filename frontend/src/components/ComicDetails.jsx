@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle, ChevronDown, X } from '@mynaui/icons-react';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
@@ -205,9 +206,9 @@ export default function ComicDetails({
         </div>
       </div>
 
-      {showChapterSelection && (
+      {showChapterSelection && createPortal(
         <div
-          className="fixed left-0 right-0 top-11 bottom-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="chapter-selection-title"
@@ -317,7 +318,7 @@ export default function ComicDetails({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* Action Buttons */}
       <div className="pt-4 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
