@@ -16,8 +16,8 @@ export default function ComicDetails({
   setSelectedWorkers,
   outputDir,
   onSelectFolder,
-  chapterRange,
-  setChapterRange,
+  selectedChapterNos,
+  setSelectedChapterNos,
   isDownloading,
   onStartDownload,
   onCancelDownload
@@ -29,6 +29,29 @@ export default function ComicDetails({
     { label: '20 Workers (High Speed - 100 Mbps+)', value: 20 },
     { label: '32 Workers (Ultra Speed - 200 Mbps+)', value: 32 },
   ];
+  const episodes = webtoonInfo?.Episodes || [];
+  const [chapterFilter, setChapterFilter] = React.useState('');
+  const visibleEpisodes = episodes.filter((episode) => {
+    const search = chapterFilter.trim().toLowerCase();
+    if (!search) return true;
+    return `${episode.ch_num || ''} ${episode.title || ''}`.toLowerCase().includes(search);
+  });
+  const selectedCount = selectedChapterNos.length;
+  const allSelected = episodes.length > 0 && selectedCount === episodes.length;
+
+  const selectAllChapters = () => {
+    setSelectedChapterNos(episodes.map((episode) => episode.episode_no));
+  };
+
+  const clearChapters = () => {
+    setSelectedChapterNos([]);
+  };
+
+  const toggleChapter = (episodeNo) => {
+    setSelectedChapterNos((current) => current.includes(episodeNo)
+      ? current.filter((number) => number !== episodeNo)
+      : [...current, episodeNo]);
+  };
 
   return (
     <div className="glass-card rounded-2xl p-5 space-y-5 shadow-lg border border-[var(--border-color)] select-none">
@@ -116,19 +139,73 @@ export default function ComicDetails({
           />
         </div>
 
-        {/* Chapter Selection Range */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center justify-between">
-            <span>Chapter Range</span>
-            <span className="text-[9px] opacity-40 normal-case tracking-normal">all, 1-10, 20-</span>
-          </label>
-          <input
-            type="text"
-            value={chapterRange}
-            onChange={(e) => setChapterRange(e.target.value)}
-            placeholder="e.g. all, 1-10, 20-"
-            className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
-          />
+        {/* Interactive Chapter Selection */}
+        <div className="md:col-span-3 space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">
+              Chapter Selection
+            </label>
+            <span className="text-[10px] opacity-50">
+              {selectedCount} of {episodes.length || 0} selected
+            </span>
+          </div>
+          <div className="rounded-xl border border-[var(--border-color)] bg-black/[0.02] dark:bg-white/[0.03] overflow-hidden">
+            <div className="flex flex-col sm:flex-row gap-2 p-2 border-b border-[var(--border-color)]">
+              <input
+                type="search"
+                value={chapterFilter}
+                onChange={(e) => setChapterFilter(e.target.value)}
+                placeholder={episodes.length ? 'Search chapters...' : 'Fetch comic info to load chapters'}
+                disabled={!episodes.length}
+                className="flex-1 h-8 px-3 text-xs rounded-lg glass-input"
+              />
+              <div className="flex gap-1.5">
+                <Button
+                  variant={allSelected ? 'primary' : 'ghost'}
+                  size="sm"
+                  onClick={selectAllChapters}
+                  disabled={!episodes.length || allSelected}
+                  className="!h-8"
+                >
+                  Select all
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearChapters}
+                  disabled={!selectedCount}
+                  className="!h-8"
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <div className="max-h-52 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+              {visibleEpisodes.map((episode) => {
+                const checked = selectedChapterNos.includes(episode.episode_no);
+                return (
+                  <label
+                    key={episode.episode_no}
+                    className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors ${checked ? 'bg-blue-600/10 text-blue-700 dark:text-blue-300' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleChapter(episode.episode_no)}
+                      className="accent-blue-600"
+                    />
+                    <span className="font-mono font-semibold">{episode.ch_num || String(episode.episode_no).padStart(3, '0')}</span>
+                    <span className="truncate opacity-75">{episode.title || 'Untitled chapter'}</span>
+                  </label>
+                );
+              })}
+              {!visibleEpisodes.length && (
+                <div className="col-span-full py-5 text-center text-xs opacity-50">
+                  {episodes.length ? 'No chapters match your search.' : 'Fetch comic info to load chapters.'}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 

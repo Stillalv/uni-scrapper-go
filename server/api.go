@@ -499,6 +499,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 			"ListURL":       info.ListURL,
 			"TotalEpisodes": len(episodes),
 			"EpisodeRange":  fmt.Sprintf("Chapter %d to %d", minEp, maxEp),
+			"Episodes":     episodes,
 			"OutputDir":     currentOutputDir,
 		},
 	})

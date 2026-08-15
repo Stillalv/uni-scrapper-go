@@ -172,7 +172,7 @@ export default function App() {
   
   const [selectedFormat, setSelectedFormat] = useState('WEBP');
   const [selectedWorkers, setSelectedWorkers] = useState(6);
-  const [chapterRange, setChapterRange] = useState('all');
+  const [selectedChapterNos, setSelectedChapterNos] = useState([]);
   const [outputDir, setOutputDir] = useState(() => {
     return window.__INITIAL_OUTPUT_DIR__ || localStorage.getItem('webtoon_output_dir') || '';
   });
@@ -456,6 +456,7 @@ export default function App() {
       const data = await res.json();
       if (data.status === 'success') {
         setWebtoonInfo(data.info);
+        setSelectedChapterNos((data.info.Episodes || []).map((episode) => episode.episode_no));
         if (data.info.OutputDir) {
           updateOutputDirState(data.info.OutputDir);
         }
@@ -502,9 +503,21 @@ export default function App() {
   // Handle Start Download
   const handleStartDownload = async () => {
     if (!webtoonInfo) return;
+    const episodes = webtoonInfo.Episodes || [];
+    const selectedSet = new Set(selectedChapterNos);
+    const orderedSelectedChapterNos = episodes
+      .map((episode) => episode.episode_no)
+      .filter((episodeNo) => selectedSet.has(episodeNo));
+    const selectedRange = orderedSelectedChapterNos.length === episodes.length
+      ? 'all'
+      : orderedSelectedChapterNos.join(',');
+    if (!selectedRange || orderedSelectedChapterNos.length === 0) {
+      addToast('No Chapters Selected', 'Select at least one chapter before starting the download.', 'warning');
+      return;
+    }
     setIsDownloading(true);
     setDownloadProgress({
-      status: `Initializing scan for chapters (${chapterRange})...`,
+      status: `Initializing scan for chapters (${selectedRange})...`,
       percentage: 0,
       downloadedImages: 0,
       totalImages: 0,
@@ -519,7 +532,7 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: comicUrl,
-          range: chapterRange,
+          range: selectedRange,
           format: selectedFormat,
           workers: selectedWorkers,
           outputDir: outputDir,
@@ -616,6 +629,8 @@ export default function App() {
                 comicUrl={comicUrl}
                 setComicUrl={setComicUrl}
                 webtoonInfo={webtoonInfo}
+                selectedChapterNos={selectedChapterNos}
+                setSelectedChapterNos={setSelectedChapterNos}
                 onCheckInfo={() => handleCheckInfo()}
                 checkingInfo={checkingInfo}
                 selectedFormat={selectedFormat}
@@ -624,8 +639,6 @@ export default function App() {
                 setSelectedWorkers={setSelectedWorkers}
                 outputDir={outputDir}
                 onSelectFolder={handleSelectFolder}
-                chapterRange={chapterRange}
-                setChapterRange={setChapterRange}
                 isDownloading={isDownloading}
                 onStartDownload={handleStartDownload}
                 onCancelDownload={handleCancelDownload}
