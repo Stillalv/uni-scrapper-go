@@ -207,7 +207,7 @@ export default function ComicDetails({
 
       {showChapterSelection && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
+          className="fixed left-0 right-0 top-11 bottom-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="chapter-selection-title"
@@ -215,7 +215,7 @@ export default function ComicDetails({
             if (event.target === event.currentTarget) setShowChapterSelection(false);
           }}
         >
-          <div className="w-full max-w-3xl max-h-[min(720px,calc(100vh-2rem))] glass-panel rounded-2xl border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden">
+          <div className="w-full max-w-3xl max-h-[calc(100vh-4rem)] glass-panel rounded-2xl border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden">
             <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between gap-3">
               <div>
                 <h2 id="chapter-selection-title" className="text-sm font-bold">Chapter Selection</h2>
