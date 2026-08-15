@@ -241,14 +241,10 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 		relURL, _ := url.Parse(href)
 		fullURL := baseURL.ResolveReference(relURL).String()
 
-		chNum := fmt.Sprintf("%03d", epNo)
-		folderName := utils.SanitizeFilename(fmt.Sprintf("Chapter %s - %s", chNum, title))
 		pageEpisodes = append(pageEpisodes, model.Episode{
-			EpisodeNo:  epNo,
-			Title:      title,
-			URL:        fullURL,
-			ChNum:      chNum,
-			FolderName: folderName,
+			EpisodeNo: epNo,
+			Title:     title,
+			URL:       fullURL,
 		})
 	})
 
@@ -383,6 +379,7 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	sort.Slice(episodes, func(i, j int) bool {
 		return episodes[i].EpisodeNo < episodes[j].EpisodeNo
 	})
+	utils.AssignChapterDisplayNumbers(episodes)
 	if logCb != nil {
 		logCb(fmt.Sprintf("Fetched %d Webtoon episodes across %d pages.", len(episodes), totalEstimatedPages))
 	}

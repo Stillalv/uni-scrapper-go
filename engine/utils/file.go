@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -18,6 +19,36 @@ func SanitizeFilename(name string) string {
 	spaceRe := regexp.MustCompile(`\s+`)
 	cleaned = spaceRe.ReplaceAllString(cleaned, " ")
 	return strings.TrimSpace(cleaned)
+}
+
+// AssignChapterDisplayNumbers keeps EpisodeNo as the stable source ID while
+// giving prologues, extras, and other special episodes readable decimal names.
+func AssignChapterDisplayNumbers(episodes []model.Episode) []model.Episode {
+	previousCanonical := 0
+	specialSlots := make(map[int]int)
+
+	for i := range episodes {
+		ep := &episodes[i]
+		if !isSpecialEpisode(ep.Title) {
+			previousCanonical++
+			ep.ChNum = fmt.Sprintf("%03d", previousCanonical)
+		} else {
+			slot := specialSlots[previousCanonical]
+			specialSlots[previousCanonical] = slot + 1
+			ep.ChNum = fmt.Sprintf("%03d.%d", previousCanonical, slot+5)
+		}
+		ep.FolderName = SanitizeFilename(fmt.Sprintf("Chapter %s - %s", ep.ChNum, ep.Title))
+	}
+	return episodes
+}
+
+func isSpecialEpisode(title string) bool {
+	title = strings.ToLower(strings.TrimSpace(title))
+	if title == "" {
+		return false
+	}
+	specialMarkers := regexp.MustCompile(`(^|[^a-z])(prolog|prologue|epilog|epilogue|special|extra|bonus|side[ -]?story|non[ -]?canon|omake|interlude|preview|teaser|afterword)([^a-z]|$)`)
+	return specialMarkers.MatchString(title) || regexp.MustCompile(`^(episode|chapter)\s*0\b`).MatchString(title)
 }
 
 // ParseChapterSelection parses user input for selection and returns corresponding episodes.

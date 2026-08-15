@@ -125,20 +125,15 @@ func parseMangaPlusEpisodesFromProto(data []byte, titleID string) []model.Episod
 		if !seen[chIDStr] {
 			seen[chIDStr] = true
 			epNum := len(episodes) + 1
-			chNum := fmt.Sprintf("%03d", epNum)
-			folderName := utils.SanitizeFilename(fmt.Sprintf("Chapter %s - Bab %d", chNum, epNum))
-
 			episodes = append(episodes, model.Episode{
-				EpisodeNo:  epNum,
-				Title:      fmt.Sprintf("Bab %d", epNum),
-				URL:        fmt.Sprintf("https://mangaplus.shueisha.co.jp/viewer/%s", chIDStr),
-				ChNum:      chNum,
-				FolderName: folderName,
+				EpisodeNo: epNum,
+				Title:     fmt.Sprintf("Bab %d", epNum),
+				URL:       fmt.Sprintf("https://mangaplus.shueisha.co.jp/viewer/%s", chIDStr),
 			})
 		}
 	}
 
-	return episodes
+	return utils.AssignChapterDisplayNumbers(episodes)
 }
 
 // FetchChapterPagesWithQuality fetches panel image URLs for a given quality level (e.g., "super_high", "high", "low").
