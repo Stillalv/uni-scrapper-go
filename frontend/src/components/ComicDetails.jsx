@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle, ChevronDown, X } from '@mynaui/icons-react';
+import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle, ChevronDown, X, BookOpen } from '@mynaui/icons-react';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import Dropdown from './ui/Dropdown';
@@ -190,19 +190,22 @@ export default function ComicDetails({
 
         {/* Chapter Selection Trigger */}
         <div className="space-y-2">
-          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">
-            Chapter Selection
+          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Chapter Selection
           </label>
-          <Button
-            variant="outline"
-            size="sm"
+          <button
+            type="button"
             onClick={() => setShowChapterSelection(true)}
             disabled={!episodes.length}
-            icon={ChevronDown}
-            className="w-full !h-8 justify-between"
+            className="w-full h-8 flex items-center justify-between gap-2 px-3 text-xs rounded-lg font-medium transition-all border select-none
+              bg-[var(--input-bg)] border-[var(--border-color)] text-[var(--text-main)]
+              hover:border-blue-500/40 disabled:opacity-50 disabled:pointer-events-none"
           >
-            <span>{episodes.length ? `${selectedCount} of ${episodes.length} selected` : 'Fetch info first'}</span>
-          </Button>
+            <span className="truncate text-left">
+              {episodes.length ? `${selectedCount} of ${episodes.length} selected` : 'Fetch info first'}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-50" />
+          </button>
         </div>
       </div>
 
