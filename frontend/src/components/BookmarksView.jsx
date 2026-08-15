@@ -127,7 +127,7 @@ export default function BookmarksView({
                   <div className="relative w-16 h-20 shrink-0 rounded-xl overflow-hidden bg-black/10 dark:bg-white/5 border border-[var(--border-color)] flex items-center justify-center p-1">
                     {comic.cover ? (
                       <img
-                        src={comic.cover}
+                        src={`/api/proxy-image?url=${encodeURIComponent(comic.cover)}`}
                         alt={comic.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300 rounded-lg"
                         onError={(e) => {
