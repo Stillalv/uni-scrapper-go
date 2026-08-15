@@ -28,6 +28,13 @@ type chapterScanResult struct {
 	ChNum          string
 }
 
+func errorText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
+}
+
 // extractImageURLs fetches a chapter viewer page and extracts all image URLs
 func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, bool, error) {
 	if strings.Contains(viewerURL, "mangaplus.shueisha.co.jp") {
@@ -254,7 +261,9 @@ func DownloadEpisodesWithGranularProgress(
 	// Limit to max 4-6 parallel workers to prevent Naver/Webtoon WAF 429 rate-limiting blocks
 	scanWorkers := 4
 	if isMangaPlusSource {
-		scanWorkers = 8
+		// MangaPlus rate-limits viewer requests aggressively. Keep the scan
+		// pool below the image download pool so large title scans remain stable.
+		scanWorkers = 3
 	}
 	if scanWorkers > totalCh {
 		scanWorkers = totalCh
@@ -295,6 +304,8 @@ func DownloadEpisodesWithGranularProgress(
 						"scannedChapters": done,
 						"totalChapters":   totalCh,
 						"totalImages":     atomic.LoadInt32(&totalImages),
+						"failedScan":      err != nil || len(imageURLs) == 0,
+						"error":           errorText(err),
 						"percentage":      0.0,
 					})
 				}
@@ -303,22 +314,25 @@ func DownloadEpisodesWithGranularProgress(
 	}
 	scanWg.Wait()
 
-	// Automatic 2nd Retry Scan Pass: Recover any chapters that failed on 1st pass due to transient WAF drops
-	var missedChapterIndices []int
-	for chIdx, scan := range scannedChapters {
-		if len(scan.ImageURLs) == 0 {
-			missedChapterIndices = append(missedChapterIndices, chIdx)
+	// Retry missed chapters in smaller serial batches so transient WAF drops
+	// do not permanently remove chapters from an otherwise valid scan.
+	for retryPass := 0; retryPass < 3; retryPass++ {
+		var missedChapterIndices []int
+		for chIdx, scan := range scannedChapters {
+			if len(scan.ImageURLs) == 0 {
+				missedChapterIndices = append(missedChapterIndices, chIdx)
+			}
 		}
-	}
-
-	if len(missedChapterIndices) > 0 && (cfg.StopRequested == nil || atomic.LoadInt32(cfg.StopRequested) == 0) {
-		time.Sleep(300 * time.Millisecond) // Grace period for WAF rate-limit reset
+		if len(missedChapterIndices) == 0 || (cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1) {
+			break
+		}
+		time.Sleep(time.Duration(500*(retryPass+1)) * time.Millisecond)
 		for _, chIdx := range missedChapterIndices {
 			if cfg.StopRequested != nil && atomic.LoadInt32(cfg.StopRequested) == 1 {
 				break
 			}
 			ep := selected[chIdx]
-			ua := utils.GetRandomUserAgent(chIdx + 77)
+			ua := utils.GetRandomUserAgent(chIdx + 77 + retryPass)
 			imageURLs, keys, hasBanner, err := extractImageURLs(ep.URL, ua)
 			if err == nil && len(imageURLs) > 0 {
 				scannedChapters[chIdx].ImageURLs = imageURLs
@@ -335,7 +349,15 @@ func DownloadEpisodesWithGranularProgress(
 
 	finalTotalImages := int(atomic.LoadInt32(&totalImages))
 	if finalTotalImages == 0 {
-		finalTotalImages = 1
+		if progressCb != nil {
+			progressCb(map[string]interface{}{
+				"type":          "SCAN_FAILED",
+				"status":        "No images were found in the selected chapters.",
+				"totalChapters": totalCh,
+				"totalImages":   0,
+			})
+		}
+		return 0, totalCh, 0
 	}
 
 	allTasks := make(chan model.ImageTask, finalTotalImages)
@@ -422,14 +444,22 @@ func DownloadEpisodesWithGranularProgress(
 				}
 				workerMu.Unlock()
 
+				imageSuccess := false
 				if fi, err := os.Stat(filePath); err == nil && fi.Size() > 0 {
-					// Skip existing file
+					imageSuccess = true
 				} else {
-					_ = downloadSingleImage(task, filePath, cfg)
+					imageSuccess = downloadSingleImage(task, filePath, cfg)
 				}
 
-				currentTotal := atomic.AddInt32(&totalDownloaded, 1)
-				chDone := atomic.AddInt32(&chapterFinishedSlice[task.ChIdx], 1)
+				var currentTotal int32
+				var chDone int32
+				if imageSuccess {
+					currentTotal = atomic.AddInt32(&totalDownloaded, 1)
+					chDone = atomic.AddInt32(&chapterFinishedSlice[task.ChIdx], 1)
+				} else {
+					currentTotal = atomic.LoadInt32(&totalDownloaded)
+					chDone = atomic.LoadInt32(&chapterFinishedSlice[task.ChIdx])
+				}
 
 				for {
 					cur := atomic.LoadInt32(&latestDoneChapter)
@@ -460,6 +490,7 @@ func DownloadEpisodesWithGranularProgress(
 						"currentChapter":     task.ChIdx + 1,
 						"currentImage":       chDone,
 						"chapterTotalImages": task.ChapterTotalImages,
+						"failedImage":        !imageSuccess,
 						"activeWorkers":      activeWorkerCopy,
 					})
 				}

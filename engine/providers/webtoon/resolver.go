@@ -279,13 +279,15 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 
 func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode, error) {
 	epMap := make(map[int]model.Episode)
-	var mu sync.Mutex
 	baseURL, _ := url.Parse(listURL)
 
 	// Step 1: Fetch Master Page (Page 1)
 	p1Res, err := fetchWebtoonEpisodePage(listURL, 1, baseURL, utils.GetRandomUserAgent(1))
-	if err != nil || len(p1Res.Episodes) == 0 {
-		return nil, err
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch Webtoon episode page 1: %w", err)
+	}
+	if len(p1Res.Episodes) == 0 {
+		return nil, fmt.Errorf("Webtoon episode page 1 returned no episodes")
 	}
 
 	maxEpNo := 0
@@ -296,18 +298,31 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 		}
 	}
 
-	// Calculate total estimated pages from latest episode number on Page 1 (10 eps per page)
-	totalEstimatedPages := (maxEpNo / 10) + 1
-	if maxEpNo%10 != 0 {
-		totalEstimatedPages = (maxEpNo / 10) + 2
+	// Calculate a fallback page count from the actual page size. The previous
+	// formula overestimated by one or two pages and could hide missing pages.
+	pageSize := len(p1Res.Episodes)
+	if pageSize < 1 {
+		pageSize = 10
+	}
+	totalEstimatedPages := (maxEpNo + pageSize - 1) / pageSize
+	if totalEstimatedPages < 1 {
+		totalEstimatedPages = 1
 	}
 	if p1Res.MaxPage > totalEstimatedPages {
 		totalEstimatedPages = p1Res.MaxPage
 	}
 
-	// Step 2: Instant Single-Batch Parallel Fetching for ALL remaining pages
+	// Step 2: Fetch every expected page and fail loudly if any page cannot be
+	// loaded. Returning a partial episode list makes a missing chapter look
+	// like a valid result to the UI.
+	type pageFetchResult struct {
+		page int
+		res  webtoonPageResult
+		err  error
+	}
+	pageResults := make(chan pageFetchResult, totalEstimatedPages-1)
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 32)
+	sem := make(chan struct{}, 8)
 
 	for p := 2; p <= totalEstimatedPages; p++ {
 		wg.Add(1)
@@ -320,27 +335,45 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 			var res webtoonPageResult
 			var fetchErr error
 
-			for attempt := 0; attempt < 3; attempt++ {
+			for attempt := 0; attempt < 4; attempt++ {
 				res, fetchErr = fetchWebtoonEpisodePage(listURL, pNum, baseURL, ua)
 				if fetchErr == nil && len(res.Episodes) > 0 {
 					break
 				}
-				time.Sleep(50 * time.Millisecond)
+				if attempt < 3 {
+					time.Sleep(time.Duration(250*(attempt+1)) * time.Millisecond)
+				}
 			}
 
-			if len(res.Episodes) > 0 {
-				mu.Lock()
-				for _, ep := range res.Episodes {
-					if _, exists := epMap[ep.EpisodeNo]; !exists {
-						epMap[ep.EpisodeNo] = ep
-					}
-				}
-				mu.Unlock()
+			if fetchErr != nil {
+				pageResults <- pageFetchResult{page: pNum, err: fetchErr}
+			} else if len(res.Episodes) == 0 {
+				pageResults <- pageFetchResult{page: pNum, err: fmt.Errorf("page returned no episodes")}
+			} else {
+				pageResults <- pageFetchResult{page: pNum, res: res}
 			}
 		}(p)
 	}
 
 	wg.Wait()
+	close(pageResults)
+
+	var failedPages []string
+	for result := range pageResults {
+		if result.err != nil {
+			failedPages = append(failedPages, fmt.Sprintf("%d (%v)", result.page, result.err))
+			continue
+		}
+		for _, ep := range result.res.Episodes {
+			if _, exists := epMap[ep.EpisodeNo]; !exists {
+				epMap[ep.EpisodeNo] = ep
+			}
+		}
+	}
+	if len(failedPages) > 0 {
+		sort.Strings(failedPages)
+		return nil, fmt.Errorf("failed to fetch Webtoon episode pages: %s", strings.Join(failedPages, ", "))
+	}
 
 	episodes := make([]model.Episode, 0, len(epMap))
 	for _, ep := range epMap {
@@ -350,6 +383,9 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	sort.Slice(episodes, func(i, j int) bool {
 		return episodes[i].EpisodeNo < episodes[j].EpisodeNo
 	})
+	if logCb != nil {
+		logCb(fmt.Sprintf("Fetched %d Webtoon episodes across %d pages.", len(episodes), totalEstimatedPages))
+	}
 
 	return episodes, nil
 }

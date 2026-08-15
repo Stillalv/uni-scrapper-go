@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"uni-scraper-go/engine/model"
 	"uni-scraper-go/engine/utils"
@@ -119,11 +120,11 @@ func parseMangaPlusEpisodesFromProto(data []byte, titleID string) []model.Episod
 	seen := make(map[string]bool)
 	var episodes []model.Episode
 
-	for i, m := range matches {
+	for _, m := range matches {
 		chIDStr := m[1]
 		if !seen[chIDStr] {
 			seen[chIDStr] = true
-			epNum := i + 1
+			epNum := len(episodes) + 1
 			chNum := fmt.Sprintf("%03d", epNum)
 			folderName := utils.SanitizeFilename(fmt.Sprintf("Chapter %s - Bab %d", chNum, epNum))
 
@@ -150,44 +151,66 @@ func FetchChapterPagesWithQuality(chapterID string, quality string) ([]string, [
 		secret = "a2a9960bd0060a6eba81ebb25ad5b13c"
 	}
 
-	url := fmt.Sprintf("https://jumpg-api.tokyo-cdn.com/api/manga_viewer?chapter_id=%s&os=android&os_ver=33&app_ver=240&secret=%s&split=yes&img_quality=%s", chapterID, quality, secret)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, nil, err
-	}
+	url := fmt.Sprintf("https://jumpg-api.tokyo-cdn.com/api/manga_viewer?chapter_id=%s&os=android&os_ver=33&app_ver=240&secret=%s&split=yes&img_quality=%s", chapterID, secret, quality)
 
-	req.Header.Set("User-Agent", "okhttp/4.9.0")
-	req.Header.Set("Accept", "*/*")
+	var lastStatus int
+	var lastBodySize int
+	for attempt := 0; attempt < 4; attempt++ {
+		req, requestErr := http.NewRequest("GET", url, nil)
+		if requestErr != nil {
+			return nil, nil, requestErr
+		}
+		req.Header.Set("User-Agent", "okhttp/4.9.0")
+		req.Header.Set("Accept", "*/*")
 
-	resp, err := utils.HTTPClient.Do(req)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to fetch MANGA Plus chapter viewer: %v", err)
-	}
-	defer resp.Body.Close()
+		resp, requestErr := utils.HTTPClient.Do(req)
+		if requestErr != nil {
+			if attempt < 3 {
+				time.Sleep(time.Duration(250*(attempt+1)) * time.Millisecond)
+				continue
+			}
+			return nil, nil, fmt.Errorf("failed to fetch MANGA Plus chapter viewer: %v", requestErr)
+		}
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		lastStatus = resp.StatusCode
+		lastBodySize = len(body)
+		if readErr != nil {
+			if attempt < 3 {
+				time.Sleep(time.Duration(250*(attempt+1)) * time.Millisecond)
+				continue
+			}
+			return nil, nil, fmt.Errorf("failed to read viewer response body: %v", readErr)
+		}
+		if resp.StatusCode != http.StatusOK {
+			if attempt < 3 {
+				time.Sleep(time.Duration(500*(attempt+1)) * time.Millisecond)
+				continue
+			}
+			return nil, nil, fmt.Errorf("MANGA Plus viewer returned HTTP status %d", resp.StatusCode)
+		}
 
-	if resp.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("MANGA Plus viewer returned HTTP status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read viewer response body: %v", err)
-	}
-
-	var pages []PageMeta
-	walkPagesProto(body, &pages)
-
-	var imageURLs []string
-	var keys []string
-
-	for _, p := range pages {
-		if strings.Contains(p.URL, "jumpg-assets") || strings.Contains(p.URL, "manga_page") {
-			imageURLs = append(imageURLs, p.URL)
-			keys = append(keys, p.EncryptionHex)
+		var imageURLs []string
+		var keys []string
+		seenURLs := make(map[string]bool)
+		var pages []PageMeta
+		walkPagesProto(body, &pages)
+		for _, p := range pages {
+			if strings.Contains(p.URL, "/manga_page/") && !seenURLs[p.URL] {
+				seenURLs[p.URL] = true
+				imageURLs = append(imageURLs, p.URL)
+				keys = append(keys, p.EncryptionHex)
+			}
+		}
+		if len(imageURLs) > 0 {
+			return imageURLs, keys, nil
+		}
+		if attempt < 3 {
+			time.Sleep(time.Duration(250*(attempt+1)) * time.Millisecond)
 		}
 	}
 
-	return imageURLs, keys, nil
+	return nil, nil, fmt.Errorf("MANGA Plus viewer returned no image URLs (status=%d body=%d)", lastStatus, lastBodySize)
 }
 
 // FetchChapterPages fetches all panel image URLs and encryption keys for a MANGA Plus chapter in super_high quality.
@@ -218,7 +241,7 @@ func parsePageMetaObj(data []byte) (PageMeta, bool) {
 			if offset+int(length) <= len(data) {
 				strVal := string(data[offset : offset+int(length)])
 				offset += int(length)
-				if fieldNumber == 1 {
+				if strings.Contains(strVal, "/manga_page/") {
 					p.URL = strVal
 				} else if fieldNumber == 5 {
 					p.EncryptionHex = strVal
