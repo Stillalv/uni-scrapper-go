@@ -14,7 +14,10 @@ export default function SettingsView({
   setSelectedWorkers,
   onReloadCatalog,
   botConfig,
-  onSaveBotConfig
+  onSaveBotConfig,
+  cloudConfig,
+  cloudStatus,
+  onSaveCloudConfig
 }) {
   const formats = ['WEBP', 'JPEG', 'PNG'];
   const workerOptions = [
@@ -27,6 +30,11 @@ export default function SettingsView({
   const [botToken, setBotToken] = useState('');
   const [botChatIDs, setBotChatIDs] = useState('');
   const [savingBot, setSavingBot] = useState(false);
+  const [syncURL, setSyncURL] = useState('');
+  const [syncToken, setSyncToken] = useState('');
+  const [syncUserID, setSyncUserID] = useState('default');
+  const [syncDeviceName, setSyncDeviceName] = useState('');
+  const [savingSync, setSavingSync] = useState(false);
 
   const handleSaveBot = async () => {
     if (!botToken.trim()) {
@@ -44,6 +52,15 @@ export default function SettingsView({
   const botConfigured = botConfig?.configured === true;
   const keepSavedToken = botConfigured && !botToken.trim();
   const savedChatIDs = botConfig?.chatIDs || '';
+  const saveCloud = async () => {
+    setSavingSync(true);
+    try {
+      await onSaveCloudConfig({ url: syncURL, token: syncToken, userID: syncUserID, deviceName: syncDeviceName });
+      setSyncToken('');
+    } finally {
+      setSavingSync(false);
+    }
+  };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-2 select-none">
@@ -54,6 +71,28 @@ export default function SettingsView({
         <div>
           <h2 className="text-lg font-bold tracking-tight">System Preferences & Settings</h2>
           <p className="text-xs opacity-60 mt-0.5">Configure default storage, image format, worker concurrency, and Telegram remote control.</p>
+        </div>
+      </div>
+
+      <div className="glass-card rounded-2xl p-5 space-y-5 border border-[var(--border-color)]">
+        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[var(--border-color)]">
+          <div>
+            <h3 className="text-xs font-semibold">Cloud Sync (Cloudflare D1)</h3>
+            <p className="text-[10px] opacity-60 mt-1">Sync bookmarks, history, and preferences across your computers.</p>
+          </div>
+          <Badge variant={cloudStatus === 'online' ? 'emerald' : cloudStatus === 'disabled' ? 'amber' : 'rose'}>
+            {cloudStatus === 'online' ? 'Cloud Online' : cloudStatus === 'disabled' ? 'Not Configured' : cloudStatus === 'checking' ? 'Checking...' : 'Offline'}
+          </Badge>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <input value={syncURL} onChange={(e) => setSyncURL(e.target.value)} placeholder={cloudConfig?.url || 'https://sync.example.com'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
+          <input type="password" value={syncToken} onChange={(e) => setSyncToken(e.target.value)} placeholder={cloudConfig?.token || 'Personal sync token'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
+          <input value={syncUserID} onChange={(e) => setSyncUserID(e.target.value)} placeholder={cloudConfig?.userID || 'default'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
+          <input value={syncDeviceName} onChange={(e) => setSyncDeviceName(e.target.value)} placeholder={cloudConfig?.deviceName || 'This computer'} className="h-8 px-3 text-xs rounded-lg glass-input" />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[10px] opacity-60">The token is stored in the local Go configuration and is never sent to the frontend bundle.</p>
+          <Button variant="primary" size="sm" onClick={saveCloud} loading={savingSync} disabled={savingSync} className="!h-8 shrink-0">Save & Sync</Button>
         </div>
       </div>
 

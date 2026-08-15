@@ -20,6 +20,8 @@ export default function App() {
   const [selectedLang, setSelectedLang] = useState('id');
   const [selectedSource, setSelectedSource] = useState('webtoon');
   const [selectedComic, setSelectedComic] = useState(null);
+  const [cloudStatus, setCloudStatus] = useState('checking');
+  const [cloudConfig, setCloudConfig] = useState({ configured: false, url: '', token: '', userID: '', deviceID: '', deviceName: '' });
   
   const [bookmarks, setBookmarks] = useState(() => {
     try {
@@ -31,34 +33,108 @@ export default function App() {
     }
   });
 
-  // Load bookmarks from Go backend API on app startup (persisted in config/bookmarks.json)
-  useEffect(() => {
-    fetch('/api/bookmarks')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === 'success' && Array.isArray(data.bookmarks)) {
+  const recordID = (record, kind) => String(
+    record?.[kind === 'bookmarks' ? 'bookmark_id' : 'history_id'] ||
+    record?.id || record?.url || record?.download_id || ''
+  );
+
+  const mergeRecords = (local, remote, kind) => {
+    const merged = new Map();
+    [...(Array.isArray(remote) ? remote : []), ...(Array.isArray(local) ? local : [])].forEach((record) => {
+      const id = recordID(record, kind);
+      if (!id) return;
+      const current = merged.get(id);
+      const currentTime = Date.parse(current?.updated_at || '') || 0;
+      const recordTime = Date.parse(record?.updated_at || '') || 0;
+      if (!current || recordTime >= currentTime) merged.set(id, { ...record, id: record.id || id });
+    });
+    return Array.from(merged.values());
+  };
+
+  const syncCloud = async ({ bookmarks: nextBookmarks, history: nextHistory, deletedBookmarks = [], deletedHistory = [], settings = [] } = {}) => {
+    try {
+      const res = await fetch('/api/cloud-sync/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookmarks: (nextBookmarks || []).map((item) => ({ ...item, updated_at: item.updated_at || new Date().toISOString() })),
+          history: (nextHistory || []).map((item) => ({ ...item, updated_at: item.updated_at || new Date().toISOString() })),
+          settings,
+          deletedBookmarks,
+          deletedHistory,
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'online') {
+        setCloudStatus('online');
+        if (Array.isArray(data.bookmarks)) {
           setBookmarks(data.bookmarks);
-          try {
-            localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(data.bookmarks));
-          } catch (e) {}
+          localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(data.bookmarks));
         }
-      })
-      .catch((e) => {});
+        if (Array.isArray(data.history)) {
+          setHistoryList(data.history);
+          localStorage.setItem('webtoon_download_history_v2', JSON.stringify(data.history));
+        }
+      } else {
+        setCloudStatus(data.status === 'disabled' ? 'disabled' : 'offline');
+      }
+      return data;
+    } catch (e) {
+      setCloudStatus('offline');
+      return null;
+    }
+  };
+
+  // Bootstrap cloud state, then merge local cache so first migration is non-destructive.
+  useEffect(() => {
+    const bootstrap = async () => {
+      try {
+        const configRes = await fetch('/api/cloud-sync/config');
+        const configData = await configRes.json();
+        if (configData.cloud) setCloudConfig(configData.cloud);
+        const res = await fetch('/api/cloud-sync/bootstrap');
+        const data = await res.json();
+        if (data.status === 'online') {
+          setCloudStatus('online');
+          const localBookmarks = JSON.parse(localStorage.getItem('webtoon_bookmarks_v1') || '[]');
+          const localHistory = JSON.parse(localStorage.getItem('webtoon_download_history_v2') || '[]');
+          const mergedBookmarks = mergeRecords(localBookmarks, data.bookmarks, 'bookmarks');
+          const mergedHistory = mergeRecords(localHistory, data.history, 'history');
+          setBookmarks(mergedBookmarks);
+          setHistoryList(mergedHistory);
+          (Array.isArray(data.settings) ? data.settings : []).forEach((setting) => {
+            const key = setting.key;
+            const value = setting.value;
+            if (key === 'theme' && (value === 'dark' || value === 'light')) setTheme(value);
+            if (key === 'format' && ['WEBP', 'JPEG', 'PNG'].includes(value)) setSelectedFormat(value);
+            if (key === 'workers' && Number(value) > 0) setSelectedWorkers(Number(value));
+            if (key === 'outputDir' && setting.device_id === data.deviceID && typeof value === 'string' && value) updateOutputDirState(value);
+          });
+          await syncCloud({ bookmarks: mergedBookmarks, history: mergedHistory });
+        } else {
+          setCloudStatus(data.status === 'disabled' ? 'disabled' : 'offline');
+        }
+      } catch (e) {
+        setCloudStatus('offline');
+      }
+    };
+    bootstrap();
   }, []);
 
-  const saveBookmarks = (newList) => {
+  const saveBookmarks = (newList, deletedID = '') => {
     const safeList = Array.isArray(newList) ? newList : [];
     setBookmarks(safeList);
     try {
       localStorage.setItem('webtoon_bookmarks_v1', JSON.stringify(safeList));
     } catch (e) {}
     
-    // Persist to disk via Go Backend API
+    // Persist locally and synchronize through the Go backend when cloud is configured.
     fetch('/api/bookmarks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(safeList),
     }).catch(() => {});
+    syncCloud({ bookmarks: safeList, history: historyList, deletedBookmarks: deletedID ? [deletedID] : [] });
   };
 
   const handleToggleBookmark = (comic) => {
@@ -68,7 +144,7 @@ export default function App() {
 
     if (exists) {
       const updated = bookmarks.filter((b) => String(b.id || b.title_no || b.TitleNo || b.url) !== comicID);
-      saveBookmarks(updated);
+      saveBookmarks(updated, comicID);
       addToast('Bookmark Removed', `Removed '${comic.title || comic.Title}' from bookmarks.`, 'info');
     } else {
       const source = comic.source || selectedSource || 'webtoon_id';
@@ -82,6 +158,7 @@ export default function App() {
         url: comic.url || comic.ListURL || comicUrl,
         source: source,
         addedAt: Date.now(),
+        updated_at: new Date().toISOString(),
       };
       const updated = [newBookmark, ...bookmarks];
       saveBookmarks(updated);
@@ -116,12 +193,18 @@ export default function App() {
     }
   });
 
-  const saveHistoryList = (newList) => {
+  const saveHistoryList = (newList, deletedID = '') => {
     const safeList = Array.isArray(newList) ? newList : [];
+    const explicitDeletedIDs = Array.isArray(deletedID) ? deletedID : (deletedID ? [deletedID] : []);
+    const remainingIDs = new Set(safeList.map((item) => recordID(item, 'history')).filter(Boolean));
+    const removedIDs = historyList
+      .map((item) => recordID(item, 'history'))
+      .filter((id) => id && !remainingIDs.has(id));
     setHistoryList(safeList);
     try {
       localStorage.setItem('webtoon_download_history_v2', JSON.stringify(safeList));
     } catch (e) {}
+    syncCloud({ bookmarks, history: safeList, deletedHistory: [...new Set([...explicitDeletedIDs, ...removedIDs])] });
   };
   const [serverStatus, setServerStatus] = useState('online');
 
@@ -137,12 +220,44 @@ export default function App() {
     return localStorage.getItem('webtoon_theme') || 'dark';
   });
 
+  useEffect(() => {
+    if (cloudStatus === 'online' || cloudStatus === 'disabled') {
+      syncCloud({ bookmarks, history: historyList, settings: [
+        { key: 'theme', value: theme },
+        { key: 'format', value: selectedFormat },
+        { key: 'workers', value: selectedWorkers },
+        { key: 'outputDir', value: outputDir, device_id: cloudConfig.deviceID },
+      ]});
+    }
+  }, [theme, selectedFormat, selectedWorkers, outputDir]);
+
   const handleToggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     try {
       localStorage.setItem('webtoon_theme', nextTheme);
     } catch (e) {}
+  };
+
+  const handleSaveCloudConfig = async (config) => {
+    const res = await fetch('/api/cloud-sync/config', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config),
+    });
+    const data = await res.json();
+    if (data.cloud) setCloudConfig(data.cloud);
+    if (data.status === 'success') {
+      const bootstrapRes = await fetch('/api/cloud-sync/bootstrap');
+      const bootstrapData = await bootstrapRes.json();
+      if (bootstrapData.status === 'online') {
+        setCloudStatus('online');
+        const mergedBookmarks = mergeRecords(bookmarks, bootstrapData.bookmarks, 'bookmarks');
+        const mergedHistory = mergeRecords(historyList, bootstrapData.history, 'history');
+        setBookmarks(mergedBookmarks);
+        setHistoryList(mergedHistory);
+        await syncCloud({ bookmarks: mergedBookmarks, history: mergedHistory });
+      } else setCloudStatus('offline');
+    }
+    return data;
   };
 
   const updateOutputDirState = (newPath) => {
@@ -301,9 +416,10 @@ export default function App() {
             durationText,
             elapsedMs: ms,
             elapsedSec: sec,
-            avgSpeed,
-            status: isStop ? 'stopped' : 'completed',
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+             avgSpeed,
+             status: isStop ? 'stopped' : 'completed',
+             updated_at: new Date().toISOString(),
+             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
             finishedDate: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
           };
 
@@ -544,6 +660,9 @@ export default function App() {
               onReloadCatalog={(refresh) => loadCatalog(selectedLang, refresh)}
               botConfig={botConfig}
               onSaveBotConfig={handleSaveBotConfig}
+              cloudConfig={cloudConfig}
+              cloudStatus={cloudStatus}
+              onSaveCloudConfig={handleSaveCloudConfig}
             />
           )}
 
@@ -565,7 +684,7 @@ export default function App() {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
         historyList={historyList}
-        onClearHistory={() => setHistoryList([])}
+         onClearHistory={() => saveHistoryList([], 'clear-all')}
       />
     </div>
   );

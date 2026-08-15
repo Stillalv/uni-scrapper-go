@@ -16,6 +16,7 @@
 - **⚡ Smart Skip & Fast Resume**: Automatically detects existing files on disk and skips them in milliseconds.
 - **📁 VS Code-Style Native Windows Directory Picker**: Win32 COM `IFileOpenDialog` integration with quadruple-location persistent state saving.
 - **📦 Single 7.88 MB Executable**: Standalone `webtoon-scraper.exe` with zero external dependencies required.
+- **☁️ Cloud Sync**: Private Cloudflare Worker + D1 synchronization for bookmarks, history, and preferences across computers.
 
 ---
 
@@ -39,6 +40,16 @@ npm run build
 cd ..
 go build -ldflags="-H windowsgui -s -w" -o webtoon-scraper.exe .
 ```
+
+## Cloud Sync Setup
+
+The default sync service is deployed at:
+
+```text
+https://webtoon-sync.rahmat-jayadi-191205.workers.dev
+```
+
+On each computer, open **Settings > Cloud Sync** and enter the same personal sync token. The Worker URL is preconfigured by the app and can be overridden in Settings if needed. Downloaded images remain local; bookmarks, history, and preferences are synchronized through Cloudflare D1.
 
 ---
 

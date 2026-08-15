@@ -1,0 +1,8 @@
+name = "webtoon-sync"
+main = "worker.js"
+compatibility_date = "2026-08-15"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "webtoon-sync"
+database_id = "298ce55c-8629-420e-a7de-9f9a4c845f84"

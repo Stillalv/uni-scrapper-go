@@ -12,12 +12,15 @@ frontend/dist/
 # Local configuration & state files (contains user local path)
 config.json
 .webtoon_scraper_config.json
+bookmarks.json
 
 # Temporary Scraped Cache & Log Files
 catalog_cache_*.json
 *.log
 *.tmp
 *.b64
+output/
+deploy/webtoon-sync/.wrangler/
 
 # System Files
 .DS_Store

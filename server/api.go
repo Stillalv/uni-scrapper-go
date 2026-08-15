@@ -19,9 +19,14 @@ import (
 )
 
 type SavedConfig struct {
-	LastOutputDir string `json:"lastOutputDir"`
-	BotToken      string `json:"botToken,omitempty"`
-	BotChatIDs    string `json:"botChatIDs,omitempty"`
+	LastOutputDir       string `json:"lastOutputDir"`
+	BotToken            string `json:"botToken,omitempty"`
+	BotChatIDs          string `json:"botChatIDs,omitempty"`
+	CloudSyncURL        string `json:"cloudSyncUrl,omitempty"`
+	CloudSyncToken      string `json:"cloudSyncToken,omitempty"`
+	CloudSyncUserID     string `json:"cloudSyncUserId,omitempty"`
+	CloudSyncDeviceID   string `json:"cloudSyncDeviceId,omitempty"`
+	CloudSyncDeviceName string `json:"cloudSyncDeviceName,omitempty"`
 }
 
 func getConfigFilePaths() []string {
@@ -170,6 +175,188 @@ func HandleBookmarks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+}
+
+func cloudSyncClientForRequest() (*cloudSyncClient, SavedConfig, error) {
+	cfg := LoadConfig()
+	if cfg.CloudSyncUserID == "" {
+		cfg.CloudSyncUserID = "default"
+	}
+	if cfg.CloudSyncDeviceID == "" && strings.TrimSpace(cfg.CloudSyncToken) != "" {
+		deviceID, err := newDeviceID()
+		if err != nil {
+			return nil, cfg, err
+		}
+		cfg.CloudSyncDeviceID = deviceID
+		if cfg.CloudSyncDeviceName == "" {
+			cfg.CloudSyncDeviceName = deviceID
+		}
+		SaveConfig(cfg)
+	}
+	return NewCloudSyncClient(cfg), cfg, nil
+}
+
+func HandleCloudSyncBootstrap(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	client, cfg, err := cloudSyncClientForRequest()
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	if !client.Enabled() {
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status": "disabled", "bookmarks": LoadBookmarks(), "history": []map[string]interface{}{},
+			"settings": []map[string]interface{}{}, "deviceID": cfg.CloudSyncDeviceID,
+		})
+		return
+	}
+	if err := client.RegisterDevice(); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	data, err := client.Bootstrap()
+	if err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	if data.Bookmarks == nil {
+		data.Bookmarks = []map[string]interface{}{}
+	}
+	// Include the legacy local file during the first migration if D1 is empty.
+	if data.BookmarkCount == 0 && len(data.Bookmarks) == 0 {
+		data.Bookmarks = LoadBookmarks()
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "online", "bookmarks": data.Bookmarks, "history": data.History,
+		"settings": data.Settings, "deviceID": cfg.CloudSyncDeviceID,
+	})
+}
+
+func HandleCloudSyncConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	cfg := LoadConfig()
+
+	if r.Method == http.MethodPost {
+		var req struct {
+			URL        string `json:"url"`
+			Token      string `json:"token"`
+			UserID     string `json:"userID"`
+			DeviceID   string `json:"deviceID"`
+			DeviceName string `json:"deviceName"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "error", "message": "Invalid cloud sync configuration."})
+			return
+		}
+		if strings.TrimSpace(req.URL) != "" {
+			cfg.CloudSyncURL = strings.TrimRight(strings.TrimSpace(req.URL), "/")
+		}
+		if strings.TrimSpace(req.Token) != "" {
+			cfg.CloudSyncToken = strings.TrimSpace(req.Token)
+		}
+		if strings.TrimSpace(req.UserID) != "" {
+			cfg.CloudSyncUserID = strings.TrimSpace(req.UserID)
+		}
+		if strings.TrimSpace(req.DeviceID) != "" {
+			cfg.CloudSyncDeviceID = strings.TrimSpace(req.DeviceID)
+		}
+		if strings.TrimSpace(req.DeviceName) != "" {
+			cfg.CloudSyncDeviceName = strings.TrimSpace(req.DeviceName)
+		}
+		if cfg.CloudSyncUserID == "" {
+			cfg.CloudSyncUserID = "default"
+		}
+		SaveConfig(cfg)
+	}
+
+	maskedToken := ""
+	if cfg.CloudSyncToken != "" {
+		maskedToken = "***" + cfg.CloudSyncToken[max(0, len(cfg.CloudSyncToken)-4):]
+	}
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "success",
+		"cloud": map[string]interface{}{
+			"configured": cfg.CloudSyncToken != "",
+			"url": func() string {
+				if cfg.CloudSyncURL != "" {
+					return cfg.CloudSyncURL
+				}
+				return defaultCloudSyncURL
+			}(), "token": maskedToken,
+			"userID": cfg.CloudSyncUserID, "deviceID": cfg.CloudSyncDeviceID,
+			"deviceName": cfg.CloudSyncDeviceName,
+		},
+	})
+}
+
+type CloudSyncRequest struct {
+	Bookmarks        []map[string]interface{} `json:"bookmarks"`
+	History          []map[string]interface{} `json:"history"`
+	Settings         []map[string]interface{} `json:"settings"`
+	DeletedBookmarks []string                 `json:"deletedBookmarks"`
+	DeletedHistory   []string                 `json:"deletedHistory"`
+}
+
+func HandleCloudSyncData(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var req CloudSyncRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "error", "message": "Invalid sync payload."})
+		return
+	}
+	client, _, err := cloudSyncClientForRequest()
+	if err != nil || !client.Enabled() {
+		if req.Bookmarks != nil {
+			SaveBookmarks(req.Bookmarks)
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "disabled", "bookmarks": req.Bookmarks, "history": req.History})
+		return
+	}
+
+	bookmarks := req.Bookmarks
+	history := req.History
+	settings := req.Settings
+	if bookmarks == nil {
+		bookmarks = []map[string]interface{}{}
+	}
+	if history == nil {
+		history = []map[string]interface{}{}
+	}
+	if settings == nil {
+		settings = []map[string]interface{}{}
+	}
+	for _, id := range req.DeletedBookmarks {
+		if err := client.DeleteRecord("bookmarks", id); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+			return
+		}
+	}
+	for _, id := range req.DeletedHistory {
+		if err := client.DeleteRecord("history", id); err != nil {
+			json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+			return
+		}
+	}
+	if bookmarks, err = client.SyncCollection("bookmarks", bookmarks); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	if history, err = client.SyncCollection("history", history); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	if settings, err = client.SyncSettings(settings); err != nil {
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "offline", "message": err.Error()})
+		return
+	}
+	SaveBookmarks(bookmarks)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status": "online", "bookmarks": bookmarks, "history": history, "settings": settings,
+	})
 }
 
 func LoadSavedOutputDir() string {

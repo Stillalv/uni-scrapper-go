@@ -156,6 +156,9 @@ func main() {
 	mux.HandleFunc("/api/benchmark", server.HandleBenchmark)
 	mux.HandleFunc("/api/bot-config", server.HandleBotConfig)
 	mux.HandleFunc("/api/bookmarks", server.HandleBookmarks)
+	mux.HandleFunc("/api/cloud-sync/bootstrap", server.HandleCloudSyncBootstrap)
+	mux.HandleFunc("/api/cloud-sync/sync", server.HandleCloudSyncData)
+	mux.HandleFunc("/api/cloud-sync/config", server.HandleCloudSyncConfig)
 	mux.HandleFunc("/api/events", server.HandleSSE)
 
 	if distFS != nil {
