@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle, ChevronDown, ChevronUp } from '@mynaui/icons-react';
+import { PlaySolid, SquareSolid, Search, Microchip, ImageRectangle, LayersTwo, CheckCircle, ChevronDown, X } from '@mynaui/icons-react';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
 import Dropdown from './ui/Dropdown';
@@ -187,107 +187,137 @@ export default function ComicDetails({
           />
         </div>
 
-        {/* Interactive Chapter Selection */}
-        <div className="md:col-span-3 space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowChapterSelection((current) => !current)}
-                disabled={!episodes.length}
-                icon={showChapterSelection ? ChevronUp : ChevronDown}
-                className="!h-8 !px-2.5"
+        {/* Chapter Selection Trigger */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">
+            Chapter Selection
+          </label>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowChapterSelection(true)}
+            disabled={!episodes.length}
+            icon={ChevronDown}
+            className="w-full !h-8 justify-between"
+          >
+            <span>{episodes.length ? `${selectedCount} of ${episodes.length} selected` : 'Fetch info first'}</span>
+          </Button>
+        </div>
+      </div>
+
+      {showChapterSelection && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="chapter-selection-title"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowChapterSelection(false);
+          }}
+        >
+          <div className="w-full max-w-3xl max-h-[min(720px,calc(100vh-2rem))] glass-panel rounded-2xl border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden">
+            <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between gap-3">
+              <div>
+                <h2 id="chapter-selection-title" className="text-sm font-bold">Chapter Selection</h2>
+                <p className="text-[11px] opacity-55 mt-1">Choose the chapters you want to download.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChapterSelection(false)}
+                className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                aria-label="Close chapter selection"
               >
-                Chapter Selection
-              </Button>
-              <span className="text-[10px] opacity-50">
-                {selectedCount} of {episodes.length || 0} selected
-              </span>
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          </div>
-          {showChapterSelection && (
-            <div className="rounded-xl border border-[var(--border-color)] bg-black/[0.02] dark:bg-white/[0.03] overflow-hidden">
-              <div className="flex flex-col gap-2 p-2 border-b border-[var(--border-color)]">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="search"
-                    value={chapterFilter}
-                    onChange={(e) => setChapterFilter(e.target.value)}
-                    placeholder="Search chapters..."
-                    className="flex-1 h-8 px-3 text-xs rounded-lg glass-input"
-                  />
-                  <div className="flex gap-1.5">
-                    <Button
-                      variant={allSelected ? 'primary' : 'ghost'}
-                      size="sm"
-                      onClick={selectAllChapters}
-                      disabled={!episodes.length || allSelected}
-                      className="!h-8"
-                    >
-                      Select all
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearChapters}
-                      disabled={!selectedCount}
-                      className="!h-8"
-                    >
-                      Unselect all
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="text"
-                    value={smartSelection}
-                    onChange={(e) => setSmartSelection(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') applySmartSelection();
-                    }}
-                    placeholder="Smart Select: 4-10, 12, 000.5"
-                    className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono"
-                  />
+
+            <div className="flex flex-col gap-2 p-3 border-b border-[var(--border-color)]">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="search"
+                  value={chapterFilter}
+                  onChange={(e) => setChapterFilter(e.target.value)}
+                  placeholder="Search chapters..."
+                  className="flex-1 h-8 px-3 text-xs rounded-lg glass-input"
+                />
+                <div className="flex gap-1.5">
                   <Button
-                    variant="primary"
+                    variant={allSelected ? 'primary' : 'ghost'}
                     size="sm"
-                    onClick={applySmartSelection}
+                    onClick={selectAllChapters}
+                    disabled={!episodes.length || allSelected}
                     className="!h-8"
                   >
-                    Apply Smart Select
+                    Select all
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearChapters}
+                    disabled={!selectedCount}
+                    className="!h-8"
+                  >
+                    Unselect all
                   </Button>
                 </div>
               </div>
-              <div className="max-h-52 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
-                {visibleEpisodes.map((episode) => {
-                  const checked = selectedChapterNos.includes(episode.episode_no);
-                  return (
-                    <label
-                      key={episode.episode_no}
-                      className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors ${checked ? 'bg-blue-600/10 text-blue-700 dark:text-blue-300' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleChapter(episode.episode_no)}
-                        className="accent-blue-600"
-                      />
-                      <span className="font-mono font-semibold">{episode.ch_num || String(episode.episode_no).padStart(3, '0')}</span>
-                      <span className="truncate opacity-75">{episode.title || 'Untitled chapter'}</span>
-                    </label>
-                  );
-                })}
-                {!visibleEpisodes.length && (
-                  <div className="col-span-full py-5 text-center text-xs opacity-50">
-                    {episodes.length ? 'No chapters match your search.' : 'Fetch comic info to load chapters.'}
-                  </div>
-                )}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={smartSelection}
+                  onChange={(e) => setSmartSelection(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applySmartSelection();
+                  }}
+                  placeholder="Smart Select: 4-10, 12, 000.5"
+                  className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono"
+                />
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={applySmartSelection}
+                  className="!h-8"
+                >
+                  Apply Smart Select
+                </Button>
               </div>
             </div>
-          )}
+
+            <div className="flex-1 min-h-0 overflow-y-auto p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+              {visibleEpisodes.map((episode) => {
+                const checked = selectedChapterNos.includes(episode.episode_no);
+                return (
+                  <label
+                    key={episode.episode_no}
+                    className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors ${checked ? 'bg-blue-600/10 text-blue-700 dark:text-blue-300' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleChapter(episode.episode_no)}
+                      className="accent-blue-600"
+                    />
+                    <span className="font-mono font-semibold">{episode.ch_num || String(episode.episode_no).padStart(3, '0')}</span>
+                    <span className="truncate opacity-75">{episode.title || 'Untitled chapter'}</span>
+                  </label>
+                );
+              })}
+              {!visibleEpisodes.length && (
+                <div className="col-span-full py-8 text-center text-xs opacity-50">
+                  {episodes.length ? 'No chapters match your search.' : 'Fetch comic info to load chapters.'}
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-[var(--border-color)] flex items-center justify-between gap-3">
+              <span className="text-xs opacity-60">{selectedCount} of {episodes.length} chapters selected</span>
+              <Button variant="primary" size="sm" onClick={() => setShowChapterSelection(false)} className="!h-8">
+                Done
+              </Button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Action Buttons */}
       <div className="pt-4 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
