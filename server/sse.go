@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,11 +10,17 @@ import (
 
 type SSEBroadcaster struct {
 	clients map[chan string]bool
-	mu      sync.Mutex
+	mu      sync.RWMutex
 }
 
 var Broadcaster = &SSEBroadcaster{
 	clients: make(map[chan string]bool),
+}
+
+var sseBufPool = sync.Pool{
+	New: func() interface{} {
+		return new(bytes.Buffer)
+	},
 }
 
 func (b *SSEBroadcaster) AddClient() chan string {
@@ -34,20 +41,26 @@ func (b *SSEBroadcaster) RemoveClient(ch chan string) {
 }
 
 func (b *SSEBroadcaster) Broadcast(eventType string, data interface{}) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-
 	payload := map[string]interface{}{
 		"type": eventType,
 		"data": data,
 	}
 
-	bytesData, err := json.Marshal(payload)
-	if err != nil {
+	buf := sseBufPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer sseBufPool.Put(buf)
+
+	buf.WriteString("data: ")
+	if err := json.NewEncoder(buf).Encode(payload); err != nil {
 		return
 	}
+	buf.WriteString("\n")
 
-	msg := fmt.Sprintf("data: %s\n\n", string(bytesData))
+	msg := buf.String()
+
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
 	for ch := range b.clients {
 		select {
 		case ch <- msg:
@@ -70,7 +83,10 @@ func HandleSSE(w http.ResponseWriter, r *http.Request) {
 		select {
 		case <-notify:
 			return
-		case msg := <-clientChan:
+		case msg, ok := <-clientChan:
+			if !ok {
+				return
+			}
 			fmt.Fprint(w, msg)
 			if flusher, ok := w.(http.Flusher); ok {
 				flusher.Flush()

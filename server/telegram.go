@@ -35,9 +35,10 @@ type tgChat struct {
 }
 
 type tgMessage struct {
-	Chat *tgChat `json:"chat"`
-	From *tgUser `json:"from"`
-	Text string  `json:"text"`
+	MessageID int64   `json:"message_id"`
+	Chat      *tgChat `json:"chat"`
+	From      *tgUser `json:"from"`
+	Text      string  `json:"text"`
 }
 
 type tgCallbackQuery struct {
@@ -424,32 +425,32 @@ func (b *TelegramBot) handleMessage(msg *tgMessage) {
 	chatID := msg.Chat.ID
 
 	if !b.isAllowed(chatID) {
-		b.sendMessage(chatID, "⛔ Akses ditolak. Chat ID ini tidak terdaftar di allowlist app.\n\nChat ID kamu: "+strconv.FormatInt(chatID, 10)+"\n\nTambahkan ke Settings → Telegram Remote Control.", nil)
+		b.sendMessage(chatID, "⛔ Access denied. This Chat ID is not registered in the app allowlist.\n\nYour Chat ID: "+strconv.FormatInt(chatID, 10)+"\n\nAdd it to Settings → Telegram Remote Control.", nil)
 		return
 	}
 
 	// Delete user's incoming message to keep chat history clean and uncluttered
-	if msg.Text != "" {
-		_ = b.deleteMessage(chatID, int64(0)) // optional cleanup call
+	if msg.Text != "" && msg.MessageID > 0 {
+		_ = b.deleteMessage(chatID, msg.MessageID)
 	}
 
 	text := strings.TrimSpace(msg.Text)
 
 	// Intercept menu buttons or commands (uses replyNew to post fresh at the bottom)
 	switch text {
-	case "/start", "/menu", "menu", "🔙 Menu Utama", "🔙 Main Menu":
+	case "/start", "/menu", "menu", "🔙 Main Menu":
 		b.resetDialog(chatID)
-		b.replyNew(chatID, "🎛️ Menu Utama\n\nPilih aksi dari keyboard di bawah.", mainMenu())
+		b.replyNew(chatID, "🎛️ Main Menu\n\nChoose an action from the keyboard below.", mainMenu())
 		return
-	case "🔍 Cek Webtoon", "🔍 Check Webtoon":
+	case "🔍 Check Webtoon":
 		b.resetDialog(chatID)
 		b.setState(chatID, func(s *botChatState) { s.awaitingURL = true })
-		b.replyNew(chatID, "🔍 Kirim URL webtoon, Title ID (contoh: 9523), atau Nama Judul:", nil)
+		b.replyNew(chatID, "🔍 Send a webtoon URL, Title ID (e.g. 9523), or Comic Title:", nil)
 		return
-	case "📚 Katalog", "📚 Catalog":
+	case "📚 Catalog":
 		b.resetDialog(chatID)
 		b.setState(chatID, func(s *botChatState) { s.awaitingCatalog = true })
-		b.replyNew(chatID, "⏳ Memuat katalog... (bisa makan waktu beberapa detik)", nil)
+		b.replyNew(chatID, "⏳ Loading catalog... (may take a few seconds)", nil)
 		go b.showCatalog(chatID, false)
 		return
 	case "⬇️ Download":
@@ -465,16 +466,16 @@ func (b *TelegramBot) handleMessage(msg *tgMessage) {
 	case "📂 Output Folder":
 		b.showFolderMenu(chatID)
 		return
-	case "🕘 Riwayat", "🕘 History":
+	case "🕘 History":
 		b.showHistory(chatID)
 		return
 	case "⚡ Benchmark":
 		go b.runBenchmark(chatID)
 		return
-	case "⚙️ Pengaturan", "⚙️ Settings":
+	case "⚙️ Settings":
 		b.showSettings(chatID)
 		return
-	case "ℹ️ Bantuan", "ℹ️ Help":
+	case "ℹ️ Help":
 		b.showHelpMenu(chatID)
 		return
 	}
@@ -505,7 +506,7 @@ func (b *TelegramBot) handleMessage(msg *tgMessage) {
 		b.searchCatalog(chatID, text)
 	default:
 		// Anything else: show menu
-		b.replyNew(chatID, "🎛️ Menu Utama\n\nPilih aksi dari keyboard di bawah.", mainMenu())
+		b.replyNew(chatID, "🎛️ Main Menu\n\nChoose an action from the keyboard below.", mainMenu())
 	}
 }
 
@@ -515,12 +516,12 @@ func (b *TelegramBot) showDownloadMenu(chatID int64) {
 	b.mu.Unlock()
 	if !hasInfo {
 		b.setState(chatID, func(s *botChatState) { s.awaitingURL = true })
-		b.replyNew(chatID, "⬇️ Belum ada komik yang di-check.\n\n🔍 Kirim URL webtoon, Title ID (contoh: 9523), atau Nama Judul:", nil)
+		b.replyNew(chatID, "⬇️ No comic has been checked yet.\n\n🔍 Send a webtoon URL, Title ID (e.g. 9523), or Comic Title:", nil)
 		return
 	}
-	b.replyNew(chatID, "⬇️ Pilih opsi download:", &tgReplyMarkup{InlineKeyboard: [][]tgButton{
-		btn("⬇️ Download Semua Chapter", "dl_all"),
-		btn("⬇️ Download Range Khusus", "dl_range"),
+	b.replyNew(chatID, "⬇️ Choose a download option:", &tgReplyMarkup{InlineKeyboard: [][]tgButton{
+		btn("⬇️ Download All Chapters", "dl_all"),
+		btn("⬇️ Custom Range", "dl_range"),
 		backBtn(),
 	}})
 }
@@ -533,14 +534,14 @@ func (b *TelegramBot) showFolderMenu(chatID int64) {
 		dir = LoadSavedOutputDir()
 	}
 	b.replyNew(chatID, "📂 Output Folder\n\n"+dir, &tgReplyMarkup{InlineKeyboard: [][]tgButton{
-		btn("✏️ Set Path Baru", "folder_set"),
-		btn("🖥️ Buka di Explorer", "folder_open"),
+		btn("✏️ Set New Path", "folder_set"),
+		btn("🖥️ Open in Explorer", "folder_open"),
 		backBtn(),
 	}})
 }
 
 func (b *TelegramBot) showHelpMenu(chatID int64) {
-	b.replyNew(chatID, "ℹ️ Bantuan\n\nBot ini mengontrol app Webtoon Scraper di komputer kamu.\n\n• Bot hanya aktif saat app dibuka\n• Semua aksi lewat tombol menu di bagian bawah layar\n• Satu download aktif (1:1 dengan app)\n• ⚙️ Pengaturan untuk atur thread, format gambar, dan bahasa\n\nGunakan menu di bagian bawah layar untuk: cek webtoon, katalog, download, stop, status, ganti output folder, benchmark, riwayat, dan pengaturan.", nil)
+	b.replyNew(chatID, "ℹ️ Help\n\nThis bot remotely controls the Webtoon Scraper app running on your computer.\n\n• The bot is only active while the desktop app is running\n• All actions are available via the bottom reply keyboard\n• Single active download at a time (synchronized with the app)\n• ⚙️ Settings allows configuring download workers, image formats, and languages\n\nUse the bottom menu buttons to check comics, browse catalogs, download, stop, inspect status, change output folder, run benchmarks, view history, and edit preferences.", nil)
 }
 
 // resetDialog clears the current dialog flow but keeps per-chat

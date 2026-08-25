@@ -15,6 +15,7 @@ import (
 var (
 	mangaPlusSecret   string
 	mangaPlusSecretMu sync.Mutex
+	reHex32           = regexp.MustCompile(`[a-f0-9]{32}`)
 )
 
 // GetDeviceSecret registers a virtual Android device and returns the device secret.
@@ -55,8 +56,7 @@ func GetDeviceSecret() (string, error) {
 		return "", err
 	}
 
-	strRe := regexp.MustCompile(`[a-f0-9]{32}`)
-	matches := strRe.FindAllString(string(body), -1)
+	matches := reHex32.FindAllString(string(body), -1)
 	if len(matches) > 0 {
 		mangaPlusSecret = matches[0]
 		return mangaPlusSecret, nil

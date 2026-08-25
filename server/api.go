@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -405,6 +406,7 @@ type DownloadRequest struct {
 }
 
 var (
+	stateMu            sync.RWMutex
 	currentWebtoonInfo *model.ComicInfo
 	currentEpisodes    []model.Episode
 	currentEpisodeMap  map[int]model.Episode
@@ -475,16 +477,20 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	currentWebtoonInfo = info
-	currentEpisodes = episodes
-	currentEpisodeMap = make(map[int]model.Episode)
+	epMap := make(map[int]model.Episode, len(episodes))
 	for _, ep := range episodes {
-		currentEpisodeMap[ep.EpisodeNo] = ep
+		epMap[ep.EpisodeNo] = ep
 	}
 
+	stateMu.Lock()
+	currentWebtoonInfo = info
+	currentEpisodes = episodes
+	currentEpisodeMap = epMap
 	if currentOutputDir == "" {
 		currentOutputDir = LoadSavedOutputDir()
 	}
+	outDir := currentOutputDir
+	stateMu.Unlock()
 
 	minEp := episodes[0].EpisodeNo
 	maxEp := episodes[len(episodes)-1].EpisodeNo
@@ -500,7 +506,7 @@ func HandleCheckInfo(w http.ResponseWriter, r *http.Request) {
 			"TotalEpisodes": len(episodes),
 			"EpisodeRange":  fmt.Sprintf("Chapter %d to %d", minEp, maxEp),
 			"Episodes":     episodes,
-			"OutputDir":     currentOutputDir,
+			"OutputDir":     outDir,
 		},
 	})
 }
@@ -570,7 +576,13 @@ func HandleStartDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := launchDownload(currentWebtoonInfo, currentEpisodes, currentEpisodeMap, req, nil); err != nil {
+	stateMu.RLock()
+	info := currentWebtoonInfo
+	episodes := currentEpisodes
+	epMap := currentEpisodeMap
+	stateMu.RUnlock()
+
+	if err := launchDownload(info, episodes, epMap, req, nil); err != nil {
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":  "error",
 			"message": err.Error(),
@@ -599,17 +611,15 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 		return fmt.Errorf("Invalid chapter range selection.")
 	}
 
+	stateMu.Lock()
 	if req.OutputDir != "" {
 		currentOutputDir = req.OutputDir
 	}
-
-	workers := req.Workers
-	if workers <= 0 {
-		workers = 6
-	}
+	outDir := currentOutputDir
 
 	// Reject a new download while the previous one is still draining.
 	if isDownloading {
+		stateMu.Unlock()
 		return fmt.Errorf("A download is already running. Wait for it to stop, then try again.")
 	}
 
@@ -618,9 +628,15 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 	stopFlag := new(int32)
 	downloadStopFlag = stopFlag
 	isDownloading = true
+	stateMu.Unlock()
+
+	workers := req.Workers
+	if workers <= 0 {
+		workers = 6
+	}
 
 	cfg := model.DownloadConfig{
-		OutputDir:     currentOutputDir,
+		OutputDir:     outDir,
 		Format:        req.Format,
 		MaxWorkers:    workers,
 		Quality:       90,
@@ -631,7 +647,9 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 	go func() {
 		startTime := time.Now()
 		defer func() {
+			stateMu.Lock()
 			isDownloading = false
+			stateMu.Unlock()
 		}()
 
 		var lastSSEEmit int64
@@ -667,8 +685,12 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 		elapsedMs := time.Since(startTime).Milliseconds()
 		elapsedSec := time.Since(startTime).Seconds()
 
-		if atomic.LoadInt32(downloadStopFlag) == 1 {
-			isDownloading = false
+		stateMu.Lock()
+		activeStopFlag := downloadStopFlag
+		isDownloading = false
+		stateMu.Unlock()
+
+		if activeStopFlag != nil && atomic.LoadInt32(activeStopFlag) == 1 {
 			data := map[string]interface{}{
 				"title":          "Download Stopped",
 				"comicTitle":     info.Title,
@@ -690,7 +712,6 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 				notify("DOWNLOAD_STOPPED", data)
 			}
 		} else {
-			isDownloading = false
 			data := map[string]interface{}{
 				"title":          info.Title,
 				"completedCount": successCh,
@@ -716,13 +737,19 @@ func launchDownload(info *model.ComicInfo, episodes []model.Episode, epMap map[i
 
 // IsDownloadActive reports whether a download is currently running or draining.
 func IsDownloadActive() bool {
+	stateMu.RLock()
+	defer stateMu.RUnlock()
 	return isDownloading
 }
 
 // RequestStopDownload asks the active download to stop: the current chapter
 // is finished first (drain mode), then the download halts.
 func RequestStopDownload() string {
-	if flag := downloadStopFlag; flag != nil {
+	stateMu.RLock()
+	flag := downloadStopFlag
+	stateMu.RUnlock()
+
+	if flag != nil {
 		atomic.StoreInt32(flag, 1)
 	}
 	if t, ok := utils.HTTPClient.Transport.(*http.Transport); ok {

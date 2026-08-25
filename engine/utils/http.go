@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Shared HTTP Client with connection pooling and timeouts
+// Shared HTTP Client with connection pooling, socket buffer tuning, and timeouts
 var HTTPClient = &http.Client{
 	Timeout: 30 * time.Second,
 	Transport: &http.Transport{
@@ -14,11 +14,14 @@ var HTTPClient = &http.Client{
 			Timeout:   10 * time.Second,
 			KeepAlive: 60 * time.Second,
 		}).DialContext,
-		ForceAttemptHTTP2:   true,
-		MaxIdleConns:        200,
-		MaxIdleConnsPerHost: 100,
-		IdleConnTimeout:     90 * time.Second,
-		TLSHandshakeTimeout: 5 * time.Second,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          200,
+		MaxIdleConnsPerHost:   100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   5 * time.Second,
+		ResponseHeaderTimeout: 15 * time.Second,
+		ReadBufferSize:        64 * 1024, // 64KB for high-throughput gigabit streaming
+		WriteBufferSize:       64 * 1024, // 64KB
 	},
 }
 
@@ -30,10 +33,14 @@ var FastHTTPClient = &http.Client{
 			Timeout:   3 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		MaxIdleConns:        200,
-		MaxIdleConnsPerHost: 100,
-		IdleConnTimeout:     30 * time.Second,
-		TLSHandshakeTimeout: 3 * time.Second,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          200,
+		MaxIdleConnsPerHost:   100,
+		IdleConnTimeout:       30 * time.Second,
+		TLSHandshakeTimeout:   3 * time.Second,
+		ResponseHeaderTimeout: 3 * time.Second,
+		ReadBufferSize:        32 * 1024,
+		WriteBufferSize:       32 * 1024,
 	},
 }
 

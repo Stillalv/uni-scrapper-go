@@ -12,12 +12,19 @@ import (
 	"uni-scraper-go/engine/model"
 )
 
+// Pre-compiled package-level regular expressions to eliminate runtime compilation overhead
+var (
+	reInvalidFileChars = regexp.MustCompile(`[\\/:*?"<>|]`)
+	reMultiSpaces      = regexp.MustCompile(`\s+`)
+	reSpecialMarkers   = regexp.MustCompile(`(^|[^a-z])(prolog|prologue|epilog|epilogue|special|extra|bonus|side[ -]?story|non[ -]?canon|omake|interlude|preview|teaser|afterword)([^a-z]|$)`)
+	reChapterZero      = regexp.MustCompile(`^(episode|chapter)\s*0\b`)
+	reRangeSelection   = regexp.MustCompile(`^(\d+)-(\d*)$`)
+)
+
 // SanitizeFilename cleans illegal characters for Windows filesystem compatibility.
 func SanitizeFilename(name string) string {
-	invalidChars := regexp.MustCompile(`[\\/:*?"<>|]`)
-	cleaned := invalidChars.ReplaceAllString(name, "_")
-	spaceRe := regexp.MustCompile(`\s+`)
-	cleaned = spaceRe.ReplaceAllString(cleaned, " ")
+	cleaned := reInvalidFileChars.ReplaceAllString(name, "_")
+	cleaned = reMultiSpaces.ReplaceAllString(cleaned, " ")
 	return strings.TrimSpace(cleaned)
 }
 
@@ -47,8 +54,7 @@ func isSpecialEpisode(title string) bool {
 	if title == "" {
 		return false
 	}
-	specialMarkers := regexp.MustCompile(`(^|[^a-z])(prolog|prologue|epilog|epilogue|special|extra|bonus|side[ -]?story|non[ -]?canon|omake|interlude|preview|teaser|afterword)([^a-z]|$)`)
-	return specialMarkers.MatchString(title) || regexp.MustCompile(`^(episode|chapter)\s*0\b`).MatchString(title)
+	return reSpecialMarkers.MatchString(title) || reChapterZero.MatchString(title)
 }
 
 // ParseChapterSelection parses user input for selection and returns corresponding episodes.
@@ -68,8 +74,7 @@ func ParseChapterSelection(selectionStr string, episodeMap map[int]model.Episode
 		return selected
 	}
 
-	rangeRegex := regexp.MustCompile(`^(\d+)-(\d*)$`)
-	rangeMatches := rangeRegex.FindStringSubmatch(selectionStr)
+	rangeMatches := reRangeSelection.FindStringSubmatch(selectionStr)
 	if len(rangeMatches) > 1 {
 		start, _ := strconv.Atoi(rangeMatches[1])
 		var end int

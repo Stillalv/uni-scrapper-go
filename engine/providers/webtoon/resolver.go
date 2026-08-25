@@ -1,10 +1,7 @@
 package webtoon
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -19,17 +16,22 @@ import (
 	"uni-scraper-go/engine/utils"
 )
 
+var (
+	reWebtoonTitleNoExtractor = regexp.MustCompile(`title_no=(\d+)`)
+	reWebtoonURLSlug          = regexp.MustCompile(`webtoons\.com/([^/]+)/([^/]+)/([^/]+)/list\?title_no=(\d+)`)
+	reWebtoonEpisodeNo        = regexp.MustCompile(`episode_no=(\d+)`)
+	reWebtoonPageParam        = regexp.MustCompile(`page=(\d+)`)
+)
+
 func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*model.ComicInfo, []model.Episode, error) {
 	cleanInput := strings.TrimSpace(rawInput)
 	var titleNo, lang, genre, titleSlug string
 
-	titleNoRe := regexp.MustCompile(`title_no=(\d+)`)
-	if matches := titleNoRe.FindStringSubmatch(cleanInput); len(matches) >= 2 {
+	if matches := reWebtoonTitleNoExtractor.FindStringSubmatch(cleanInput); len(matches) >= 2 {
 		titleNo = matches[1]
 	}
 
-	urlSlugRe := regexp.MustCompile(`webtoons\.com/([^/]+)/([^/]+)/([^/]+)/list\?title_no=(\d+)`)
-	if matches := urlSlugRe.FindStringSubmatch(cleanInput); len(matches) >= 5 {
+	if matches := reWebtoonURLSlug.FindStringSubmatch(cleanInput); len(matches) >= 5 {
 		lang = matches[1]
 		genre = matches[2]
 		titleSlug = matches[3]
@@ -74,7 +76,7 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 		req.Header.Set("Referer", "https://www.webtoons.com/")
 		req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
 
-		resp, err = fastPageClient.Do(req)
+		resp, err = utils.FastHTTPClient.Do(req)
 		if err == nil && resp.StatusCode == 200 {
 			break
 		}
@@ -93,18 +95,13 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 		return nil, nil, fmt.Errorf("HTTP %d when resolving list page", resp.StatusCode)
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(bodyBytes))
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	finalURL := resp.Request.URL.String()
-	if matches := urlSlugRe.FindStringSubmatch(finalURL); len(matches) >= 5 {
+	if matches := reWebtoonURLSlug.FindStringSubmatch(finalURL); len(matches) >= 5 {
 		lang = matches[1]
 		genre = matches[2]
 		titleSlug = matches[3]
@@ -162,20 +159,6 @@ func (p *WebtoonProvider) ResolveComic(rawInput string, logCb func(string)) (*mo
 	return info, episodes, nil
 }
 
-var fastPageClient = &http.Client{
-	Timeout: 4 * time.Second,
-	Transport: &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   3 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 50,
-		IdleConnTimeout:     30 * time.Second,
-		TLSHandshakeTimeout: 3 * time.Second,
-	},
-}
-
 type webtoonPageResult struct {
 	Episodes []model.Episode
 	MaxPage  int
@@ -203,7 +186,7 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 	req.Header.Set("Referer", "https://www.webtoons.com/")
 	req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
 
-	resp, err := fastPageClient.Do(req)
+	resp, err := utils.FastHTTPClient.Do(req)
 	if err != nil {
 		return webtoonPageResult{}, err
 	}
@@ -218,7 +201,6 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 		return webtoonPageResult{}, err
 	}
 
-	episodeNoRe := regexp.MustCompile(`episode_no=(\d+)`)
 	var pageEpisodes []model.Episode
 
 	doc.Find("#_listUl a, ul.card_lst a").Each(func(i int, s *goquery.Selection) {
@@ -226,7 +208,7 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 		if !exists {
 			return
 		}
-		matches := episodeNoRe.FindStringSubmatch(href)
+		matches := reWebtoonEpisodeNo.FindStringSubmatch(href)
 		if len(matches) < 2 {
 			return
 		}
@@ -249,10 +231,9 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 	})
 
 	maxPage := page
-	pageRe := regexp.MustCompile(`page=(\d+)`)
 	doc.Find(".paginate a, .page_area a").Each(func(i int, s *goquery.Selection) {
 		if href, ok := s.Attr("href"); ok {
-			if m := pageRe.FindStringSubmatch(href); len(m) >= 2 {
+			if m := reWebtoonPageParam.FindStringSubmatch(href); len(m) >= 2 {
 				if pNum, err := strconv.Atoi(m[1]); err == nil && pNum > maxPage {
 					maxPage = pNum
 				}
@@ -274,7 +255,6 @@ func fetchWebtoonEpisodePage(listURL string, page int, baseURL *url.URL, userAge
 }
 
 func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode, error) {
-	epMap := make(map[int]model.Episode)
 	baseURL, _ := url.Parse(listURL)
 
 	// Step 1: Fetch Master Page (Page 1)
@@ -288,10 +268,13 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 
 	maxEpNo := 0
 	for _, ep := range p1Res.Episodes {
-		epMap[ep.EpisodeNo] = ep
 		if ep.EpisodeNo > maxEpNo {
 			maxEpNo = ep.EpisodeNo
 		}
+	}
+	epMap := make(map[int]model.Episode, maxEpNo)
+	for _, ep := range p1Res.Episodes {
+		epMap[ep.EpisodeNo] = ep
 	}
 
 	// Calculate a fallback page count from the actual page size. The previous

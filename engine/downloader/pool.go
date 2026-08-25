@@ -81,13 +81,7 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 		return nil, nil, false, fmt.Errorf("HTTP %d", resp.StatusCode)
 	}
 
-	bodyBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, false, err
-	}
-
-	htmlContent := string(bodyBytes)
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlContent))
+	doc, err := goquery.NewDocumentFromReader(resp.Body)
 	if err != nil {
 		return nil, nil, false, err
 	}
@@ -160,9 +154,6 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 }
 
 func downloadSingleImage(task model.ImageTask, filePath string, cfg model.DownloadConfig) bool {
-	dirPath := filepath.Dir(filePath)
-	_ = os.MkdirAll(dirPath, 0755)
-
 	ua := utils.GetRandomUserAgent(task.Index)
 
 	for attempt := 0; attempt < 4; attempt++ {
@@ -192,22 +183,43 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 			continue
 		}
 
-		bodyBytes, err := io.ReadAll(resp.Body)
-		resp.Body.Close()
-		if err != nil || len(bodyBytes) == 0 {
-			continue
-		}
+		if task.EncryptionKey == "" {
+			// Fast direct streaming path for unencrypted images
+			dirPath := filepath.Dir(filePath)
+			_ = os.MkdirAll(dirPath, 0755)
 
-		if task.EncryptionKey != "" {
+			f, createErr := os.Create(filePath)
+			if createErr != nil {
+				resp.Body.Close()
+				continue
+			}
+			written, copyErr := io.Copy(f, resp.Body)
+			_ = f.Close()
+			resp.Body.Close()
+
+			if copyErr == nil && written > 0 {
+				return true
+			}
+			_ = os.Remove(filePath)
+		} else {
+			// Encrypted image path (e.g. MangaPlus XOR)
+			bodyBytes, readErr := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if readErr != nil || len(bodyBytes) == 0 {
+				continue
+			}
+
 			bodyBytes = mangaplus.XORDecrypt(bodyBytes, task.EncryptionKey)
-		}
 
-		err = os.WriteFile(filePath, bodyBytes, 0644)
-		if err == nil && len(bodyBytes) > 0 {
-			return true
-		}
+			dirPath := filepath.Dir(filePath)
+			_ = os.MkdirAll(dirPath, 0755)
 
-		_ = os.Remove(filePath)
+			writeErr := os.WriteFile(filePath, bodyBytes, 0644)
+			if writeErr == nil && len(bodyBytes) > 0 {
+				return true
+			}
+			_ = os.Remove(filePath)
+		}
 	}
 	return false
 }

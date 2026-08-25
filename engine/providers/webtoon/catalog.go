@@ -50,6 +50,8 @@ func (p *WebtoonProvider) CanHandle(input string) bool {
 	return false
 }
 
+var reWebtoonTitleNo = regexp.MustCompile(`title_no=(\d+)`)
+
 func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([]model.CatalogItem, error) {
 	cachePath := filepath.Join(".", fmt.Sprintf("catalog_cache_%s.json", p.lang))
 
@@ -87,7 +89,7 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 	}
 
 	days := []string{"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday", "complete"}
-	comicsMap := make(map[string]model.CatalogItem)
+	comicsMap := make(map[string]model.CatalogItem, 400)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
@@ -129,14 +131,13 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 
 			baseURL, _ := url.Parse(targetURL)
 			localCount := 0
-			titleNoRe := regexp.MustCompile(`title_no=(\d+)`)
 
 			doc.Find("a").Each(func(i int, s *goquery.Selection) {
 				href, exists := s.Attr("href")
 				if !exists {
 					return
 				}
-				matches := titleNoRe.FindStringSubmatch(href)
+				matches := reWebtoonTitleNo.FindStringSubmatch(href)
 				if len(matches) < 2 {
 					return
 				}
@@ -145,8 +146,8 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 				genre := dayName
 				if isCompleted {
 					genre = "Selesai"
-				} else {
-					genre = strings.Title(dayName)
+				} else if len(dayName) > 0 {
+					genre = strings.ToUpper(dayName[:1]) + dayName[1:]
 				}
 
 				subjTag := s.Find(".subj, .title, .name")
@@ -164,8 +165,7 @@ func (p *WebtoonProvider) FetchCatalog(forceRefresh bool, logCb func(string)) ([
 
 				if title == "" {
 					titleRaw := strings.TrimSpace(s.Text())
-					spaceRe := regexp.MustCompile(`\s+`)
-					title = spaceRe.ReplaceAllString(titleRaw, " ")
+					title = strings.Join(strings.Fields(titleRaw), " ")
 				}
 
 				imgTag := s.Find("img")

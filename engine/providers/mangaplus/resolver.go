@@ -12,12 +12,19 @@ import (
 	"uni-scraper-go/engine/utils"
 )
 
+var (
+	reMangaPlusTitleID   = regexp.MustCompile(`(?:titles/|title_id=)?(\d+)`)
+	reMangaPlusProtoText = regexp.MustCompile(`[a-zA-Z0-9 _\-:/?&=.']{3,}`)
+	reMangaPlusViewerID  = regexp.MustCompile(`viewer/(\d+)`)
+	reMangaPlusChapterID = regexp.MustCompile(`https?://jumpg-assets[0-9]*\.tokyo-cdn\.com/secure/title/[0-9]+/chapter/([0-9]+)/chapter_thumbnail`)
+	reMangaPlusPortrait  = regexp.MustCompile(`https?://jumpg-assets[0-9]*\.tokyo-cdn\.com/secure/title/[0-9]+/title_thumbnail_portrait_list/[^\s"']+\.jpg[^\s"']*`)
+)
+
 func (p *MangaPlusProvider) ResolveComic(rawInput string, logCb func(string)) (*model.ComicInfo, []model.Episode, error) {
 	cleanInput := strings.TrimSpace(rawInput)
 	var titleID string
 
-	reID := regexp.MustCompile(`(?:titles/|title_id=)?(\d+)`)
-	matches := reID.FindStringSubmatch(cleanInput)
+	matches := reMangaPlusTitleID.FindStringSubmatch(cleanInput)
 	if len(matches) >= 2 {
 		titleID = matches[1]
 	} else {
@@ -81,8 +88,7 @@ func (p *MangaPlusProvider) ResolveComic(rawInput string, logCb func(string)) (*
 		ListURL: fmt.Sprintf("https://mangaplus.shueisha.co.jp/titles/%s", titleID),
 	}
 
-	rePortrait := regexp.MustCompile(`https?://jumpg-assets[0-9]*\.tokyo-cdn\.com/secure/title/` + titleID + `/title_thumbnail_portrait_list/[^\s"']+\.jpg[^\s"']*`)
-	if m := rePortrait.FindString(string(body)); m != "" {
+	if m := reMangaPlusPortrait.FindString(string(body)); m != "" {
 		info.CoverURL = m
 	}
 
@@ -95,8 +101,7 @@ func (p *MangaPlusProvider) ResolveComic(rawInput string, logCb func(string)) (*
 
 func parseMangaPlusHeaderFromProto(data []byte) (string, string) {
 	var name, author string
-	strRe := regexp.MustCompile(`[a-zA-Z0-9 _\-:/?&=.']{3,}`)
-	matches := strRe.FindAllString(string(data), -1)
+	matches := reMangaPlusProtoText.FindAllString(string(data), -1)
 
 	for _, s := range matches {
 		sClean := strings.TrimSpace(s)
@@ -114,8 +119,7 @@ func parseMangaPlusHeaderFromProto(data []byte) (string, string) {
 
 func parseMangaPlusEpisodesFromProto(data []byte, titleID string) []model.Episode {
 	bodyStr := string(data)
-	reThumb := regexp.MustCompile(`https?://jumpg-assets[0-9]*\.tokyo-cdn\.com/secure/title/` + titleID + `/chapter/([0-9]+)/chapter_thumbnail`)
-	matches := reThumb.FindAllStringSubmatch(bodyStr, -1)
+	matches := reMangaPlusChapterID.FindAllStringSubmatch(bodyStr, -1)
 
 	seen := make(map[string]bool)
 	var episodes []model.Episode
@@ -299,8 +303,7 @@ func walkPagesProto(data []byte, pages *[]PageMeta) {
 
 // ExtractChapterIDFromURL extracts chapter ID from a MANGA Plus viewer URL.
 func ExtractChapterIDFromURL(viewerURL string) string {
-	re := regexp.MustCompile(`viewer/(\d+)`)
-	matches := re.FindStringSubmatch(viewerURL)
+	matches := reMangaPlusViewerID.FindStringSubmatch(viewerURL)
 	if len(matches) >= 2 {
 		return matches[1]
 	}

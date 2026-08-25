@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	registryMu sync.RWMutex
-	providers  = make(map[string]Provider)
+	registryMu    sync.RWMutex
+	providers     = make(map[string]Provider)
+	providerOrder = make([]Provider, 0)
 )
 
 // Register adds a new Provider to the global registry.
@@ -17,6 +18,9 @@ func Register(p Provider) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if p != nil {
+		if _, exists := providers[p.SourceID()]; !exists {
+			providerOrder = append(providerOrder, p)
+		}
 		providers[p.SourceID()] = p
 	}
 }
@@ -29,11 +33,11 @@ func Get(sourceID string) (Provider, bool) {
 	return p, ok
 }
 
-// FindMatchingProvider returns the first Provider capable of handling the input URL or ID.
+// FindMatchingProvider returns the first Provider capable of handling the input URL or ID in deterministic order.
 func FindMatchingProvider(input string) (Provider, bool) {
 	registryMu.RLock()
 	defer registryMu.RUnlock()
-	for _, p := range providers {
+	for _, p := range providerOrder {
 		if p.CanHandle(input) {
 			return p, true
 		}
