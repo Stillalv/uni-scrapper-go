@@ -748,7 +748,7 @@ func (b *TelegramBot) handleCallback(cb *tgCallbackQuery) {
 		b.setState(chatID, func(s *botChatState) { s.lang = l })
 		toast = "✅ Language: " + strings.ToUpper(l)
 		b.showSettings(chatID)
-	case "src_webtoon_id", "src_mangaplus_id", "src_webtoon_en":
+	case "src_webtoon_id", "src_mangaplus_id", "src_webtoon_en", "src_naver_ko":
 		s := strings.TrimPrefix(cb.Data, "src_")
 		b.setState(chatID, func(st *botChatState) { st.source = s })
 		toast = "✅ Source: " + s
@@ -968,7 +968,10 @@ func (b *TelegramBot) sendCatalogPage(chatID int64) {
 	markup.InlineKeyboard = append(markup.InlineKeyboard, []tgButton{
 		{Text: "🇮🇩 Webtoon", CallbackData: "src_webtoon_id"},
 		{Text: "🔴 MANGA Plus", CallbackData: "src_mangaplus_id"},
+	})
+	markup.InlineKeyboard = append(markup.InlineKeyboard, []tgButton{
 		{Text: "🇬🇧 Webtoon", CallbackData: "src_webtoon_en"},
+		{Text: "🇰🇷 Naver (KO)", CallbackData: "src_naver_ko"},
 	})
 	row := []tgButton{}
 	if end < len(list) {

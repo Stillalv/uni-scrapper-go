@@ -53,7 +53,15 @@ export default function CatalogView({
             <img src={activeLogo} alt="Catalog Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Comic Catalog ({selectedSource === 'mangaplus_id' ? 'MANGA Plus Indonesia' : 'LINE Webtoon'})</h2>
+            <h2 className="text-lg font-bold tracking-tight">
+              Comic Catalog ({
+                selectedSource === 'mangaplus_id'
+                  ? 'MANGA Plus Indonesia'
+                  : selectedSource === 'naver_ko'
+                  ? 'Naver Webtoon Korea'
+                  : 'LINE Webtoon'
+              })
+            </h2>
             <p className="text-xs opacity-60 mt-0.5">Browse and pick your favorite comics ({catalog.length} comics registered).</p>
           </div>
         </div>
@@ -77,20 +85,6 @@ export default function CatalogView({
 
             <button
               type="button"
-              onClick={() => onChangeSource ? onChangeSource('mangaplus_id', 'id') : null}
-              className={`h-8 px-3 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 select-none ${
-                selectedSource === 'mangaplus_id'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <span className="fi fi-id rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
-              <img src={mangaplusLogo} alt="MANGA Plus" className="w-4 h-4 object-contain shrink-0" />
-              <span>MANGA Plus (ID)</span>
-            </button>
-
-            <button
-              type="button"
               onClick={() => onChangeSource ? onChangeSource('webtoon', 'en') : onChangeLang('en')}
               className={`h-8 px-3 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 select-none ${
                 selectedSource === 'webtoon' && selectedLang === 'en'
@@ -101,6 +95,34 @@ export default function CatalogView({
               <span className="fi fi-gb rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
               <img src={webtoonLogo} alt="Webtoon" className="w-4 h-4 object-contain shrink-0" />
               <span>Webtoon (EN)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeSource ? onChangeSource('naver_ko', 'ko') : null}
+              className={`h-8 px-3 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 select-none ${
+                selectedSource === 'naver_ko'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <span className="fi fi-kr rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
+              <img src={webtoonLogo} alt="Naver" className="w-4 h-4 object-contain shrink-0" />
+              <span>Naver (KO)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => onChangeSource ? onChangeSource('mangaplus_id', 'id') : null}
+              className={`h-8 px-3 rounded-lg font-semibold text-xs transition-all flex items-center gap-2 select-none ${
+                selectedSource === 'mangaplus_id'
+                  ? 'bg-red-600 text-white shadow-sm'
+                  : 'text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+              }`}
+            >
+              <span className="fi fi-id rounded-[2px] shadow-sm w-4 h-3 shrink-0"></span>
+              <img src={mangaplusLogo} alt="MANGA Plus" className="w-4 h-4 object-contain shrink-0" />
+              <span>MANGA Plus (ID)</span>
             </button>
           </div>
 

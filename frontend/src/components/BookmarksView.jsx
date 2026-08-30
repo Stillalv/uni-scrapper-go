@@ -19,6 +19,7 @@ export default function BookmarksView({
     { id: 'all', label: 'All Catalogs' },
     { id: 'webtoon_id', label: 'Webtoon (ID)', flag: 'fi-id', logo: webtoonLogo },
     { id: 'webtoon_en', label: 'Webtoon (EN)', flag: 'fi-gb', logo: webtoonLogo },
+    { id: 'naver_ko', label: 'Naver (KO)', flag: 'fi-kr', logo: webtoonLogo },
     { id: 'mangaplus_id', label: 'MANGA Plus (ID)', flag: 'fi-id', logo: mangaplusLogo },
   ];
 
@@ -108,14 +109,21 @@ export default function BookmarksView({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredBookmarks.map((comic) => {
             const isMangaPlus = comic.source === 'mangaplus_id';
+            const isNaver = comic.source === 'naver_ko' || comic.source === 'naver';
             const sourceLogo = isMangaPlus ? mangaplusLogo : webtoonLogo;
-            const flagClass = comic.source === 'webtoon_en' ? 'fi-gb' : 'fi-id';
-            const sourceLabel =
-              isMangaPlus
-                ? 'MANGA Plus (ID)'
-                : comic.source === 'webtoon_en'
-                ? 'Webtoon (EN)'
-                : 'Webtoon (ID)';
+            const flagClass =
+              comic.source === 'webtoon_en'
+                ? 'fi-gb'
+                : isNaver
+                ? 'fi-kr'
+                : 'fi-id';
+            const sourceLabel = isMangaPlus
+              ? 'MANGA Plus (ID)'
+              : comic.source === 'webtoon_en'
+              ? 'Webtoon (EN)'
+              : isNaver
+              ? 'Naver (KO)'
+              : 'Webtoon (ID)';
 
             return (
               <div

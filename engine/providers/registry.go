@@ -55,6 +55,8 @@ func FetchCatalogBySource(sourceID string, lang string, forceRefresh bool, logCb
 		}
 	} else if sourceID == "mangaplus" {
 		sourceID = "mangaplus_id"
+	} else if sourceID == "naver" || sourceID == "naver_ko" {
+		sourceID = "naver_ko"
 	}
 
 	p, ok := Get(sourceID)

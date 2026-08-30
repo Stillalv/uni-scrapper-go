@@ -50,6 +50,12 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 		userAgent = utils.DefaultHeaders["User-Agent"]
 	}
 
+	isNaverViewer := strings.Contains(viewerURL, "comic.naver.com")
+	referer := "https://www.webtoons.com/"
+	if isNaverViewer {
+		referer = "https://comic.naver.com/"
+	}
+
 	var resp *http.Response
 	var err error
 
@@ -59,8 +65,8 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 			return nil, nil, false, reqErr
 		}
 		req.Header.Set("User-Agent", userAgent)
-		req.Header.Set("Referer", "https://www.webtoons.com/")
-		req.Header.Set("Accept-Language", "id,en-US;q=0.9,en;q=0.8")
+		req.Header.Set("Referer", referer)
+		req.Header.Set("Accept-Language", "ko-KR,ko;q=0.9,id,en-US;q=0.8,en;q=0.7")
 
 		resp, err = utils.FastHTTPClient.Do(req)
 		if err == nil && resp.StatusCode == 200 {
@@ -99,7 +105,9 @@ func extractImageURLs(viewerURL string, userAgent string) ([]string, []string, b
 		return s == "" || strings.Contains(sl, "bg_transparency.png") || strings.Contains(sl, "thumb_")
 	}
 
-	doc.Find("#_imageList img._images, #_imageList img").Each(func(i int, s *goquery.Selection) {
+	// Support both LINE Webtoon (#_imageList) and Naver Webtoon (.wt_viewer, #sectionContWide)
+	selectors := "#_imageList img._images, #_imageList img, .wt_viewer img, #sectionContWide img, div.view_area img"
+	doc.Find(selectors).Each(func(i int, s *goquery.Selection) {
 		classAttr, _ := s.Attr("class")
 		if strings.Contains(classAttr, "_thumbnailImages") {
 			return
@@ -169,6 +177,8 @@ func downloadSingleImage(task model.ImageTask, filePath string, cfg model.Downlo
 		if strings.Contains(task.URL, "tokyo-cdn.com") || strings.Contains(task.Viewer, "mangaplus") || task.EncryptionKey != "" {
 			req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
 			req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+		} else if strings.Contains(task.URL, "comic.naver.com") || strings.Contains(task.Viewer, "comic.naver.com") || strings.Contains(task.URL, "pstatic.net") {
+			req.Header.Set("Referer", "https://comic.naver.com/")
 		} else {
 			req.Header.Set("Referer", task.Viewer)
 		}

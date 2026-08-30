@@ -869,6 +869,8 @@ func HandleProxyImage(w http.ResponseWriter, r *http.Request) {
 	if strings.Contains(imgURL, "tokyo-cdn.com") {
 		req.Header.Set("Referer", "https://mangaplus.shueisha.co.jp/")
 		req.Header.Set("Origin", "https://mangaplus.shueisha.co.jp")
+	} else if strings.Contains(imgURL, "pstatic.net") || strings.Contains(imgURL, "comic.naver.com") {
+		req.Header.Set("Referer", "https://comic.naver.com/")
 	} else {
 		req.Header.Set("Referer", "https://www.webtoons.com/")
 	}

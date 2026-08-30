@@ -305,7 +305,12 @@ export default function App() {
       const data = await res.json();
       if (data.status === 'success') {
         setCatalog(data.catalog || []);
-        const sourceLabel = source === 'mangaplus_id' ? 'MANGA Plus (Indonesia)' : 'Webtoon';
+        const sourceLabel =
+          source === 'mangaplus_id'
+            ? 'MANGA Plus (Indonesia)'
+            : source === 'naver_ko' || source === 'naver'
+            ? 'Naver Webtoon (Korea)'
+            : 'Webtoon';
         addToast('Catalog Ready', `Successfully loaded ${data.catalog.length} ${sourceLabel} comics.`, 'success');
       } else {
         addToast('Catalog Failed', data.message || 'Failed to load comic catalog.', 'error');
