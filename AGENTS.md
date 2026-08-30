@@ -40,8 +40,9 @@
 ---
 
 ## 🐙 Git & Version Control Rules
-1. **Local Commits**:
-   - Antigravity MUST commit code changes locally after completing milestones, fixing issues, or refactoring.
+1. **Local Commits on Active Branch**:
+   - Antigravity MUST commit code changes locally on the currently active branch (e.g. `feat/naver-webtoon-provider`) after completing milestones, modifying files, fixing issues, or refactoring.
+   - All commits MUST stay strictly on the local active branch without pushing to remote until explicit user permission is given.
 2. **Remote Push Protection (Strict)**:
    - Antigravity MUST ALWAYS ask for explicit user permission before executing `git push` to remote repositories. NEVER push automatically without user approval.
 3. **GitHub Release Naming & Formatting Standard**:

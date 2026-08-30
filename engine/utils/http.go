@@ -25,20 +25,20 @@ var HTTPClient = &http.Client{
 	},
 }
 
-// FastHTTPClient with aggressive 4s timeout specifically for HTML page & viewer resolution
+// FastHTTPClient with 15s timeout specifically for HTML page & viewer resolution (HTTP/1.1 for reliable anti-throttling)
 var FastHTTPClient = &http.Client{
-	Timeout: 4 * time.Second,
+	Timeout: 15 * time.Second,
 	Transport: &http.Transport{
 		DialContext: (&net.Dialer{
-			Timeout:   3 * time.Second,
+			Timeout:   6 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
-		ForceAttemptHTTP2:     true,
+		ForceAttemptHTTP2:     false,
 		MaxIdleConns:          200,
-		MaxIdleConnsPerHost:   100,
+		MaxIdleConnsPerHost:   50,
 		IdleConnTimeout:       30 * time.Second,
-		TLSHandshakeTimeout:   3 * time.Second,
-		ResponseHeaderTimeout: 3 * time.Second,
+		TLSHandshakeTimeout:   6 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
 		ReadBufferSize:        32 * 1024,
 		WriteBufferSize:       32 * 1024,
 	},

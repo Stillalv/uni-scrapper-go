@@ -301,7 +301,7 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 	}
 	pageResults := make(chan pageFetchResult, totalEstimatedPages-1)
 	var wg sync.WaitGroup
-	sem := make(chan struct{}, 8)
+	sem := make(chan struct{}, 4)
 
 	for p := 2; p <= totalEstimatedPages; p++ {
 		wg.Add(1)
@@ -320,7 +320,7 @@ func GetAllWebtoonEpisodes(listURL string, logCb func(string)) ([]model.Episode,
 					break
 				}
 				if attempt < 3 {
-					time.Sleep(time.Duration(250*(attempt+1)) * time.Millisecond)
+					time.Sleep(time.Duration(300*(attempt+1)) * time.Millisecond)
 				}
 			}
 
