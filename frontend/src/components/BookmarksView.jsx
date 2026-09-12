@@ -185,7 +185,7 @@ export default function BookmarksView({
                     onClick={() => onRemoveBookmark(comic)}
                     title="Remove from Bookmarks"
                     icon={Trash}
-                    className="!h-7.5 !w-7.5 !px-0"
+                    className="!h-8 !w-8 shrink-0"
                   />
                 </div>
               </div>

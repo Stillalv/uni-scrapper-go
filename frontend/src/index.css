@@ -67,6 +67,11 @@
     color: var(--text-main);
     @apply font-sans antialiased h-screen overflow-hidden;
   }
+
+  /* Crisp, solid icon stroke weight (elevates thin 1.5px to confident 1.85px) */
+  svg[stroke="currentColor"] {
+    stroke-width: 1.85px;
+  }
 }
 
 /* Glassmorphism & Surface Elevation Utilities */

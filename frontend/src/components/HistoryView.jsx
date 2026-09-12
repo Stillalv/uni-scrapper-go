@@ -91,8 +91,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
       {/* Analytics Metric Cards (Unified, Clean Palette) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
-            <LayersTwo className="w-4 h-4 text-[var(--accent)]" />
+          <div className="p-2.5 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <LayersTwo className="w-4.5 h-4.5 text-[var(--accent)]" />
           </div>
           <div className="min-w-0">
             <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalSessions}</div>
@@ -101,8 +101,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
         </div>
 
         <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
-            <ClockCircle className="w-4 h-4 text-amber-500" />
+          <div className="p-2.5 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <ClockCircle className="w-4.5 h-4.5 text-amber-500" />
           </div>
           <div className="min-w-0">
             <div className="text-base font-bold font-mono text-[var(--text-main)]">{formatTotalTime(totalElapsedMs)}</div>
@@ -111,8 +111,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
         </div>
 
         <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
-            <CheckCircle className="w-4 h-4 text-emerald-500" />
+          <div className="p-2.5 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <CheckCircle className="w-4.5 h-4.5 text-emerald-500" />
           </div>
           <div className="min-w-0">
             <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalChaptersDownloaded}</div>
@@ -121,8 +121,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
         </div>
 
         <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
-            <Lightning className="w-4 h-4 text-[var(--accent)]" />
+          <div className="p-2.5 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <Lightning className="w-4.5 h-4.5 text-[var(--accent)]" />
           </div>
           <div className="min-w-0">
             <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalImagesDownloaded.toLocaleString()}</div>
@@ -244,7 +244,7 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                         size="sm"
                         onClick={() => onOpenFolder(item.outputDir)}
                         icon={Folder}
-                        className="!h-6.5 !px-2 !text-[11px]"
+                        className="!h-7 !px-2.5 !text-[11px]"
                         title="Open in File Explorer"
                       >
                         Open
@@ -257,7 +257,7 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                         size="sm"
                         onClick={() => handleCopyPath(item.outputDir, itemKey)}
                         icon={Copy}
-                        className="!h-6.5 !px-2 !text-[11px]"
+                        className="!h-7 !px-2.5 !text-[11px]"
                         title="Copy Path"
                       >
                         {copiedId === itemKey ? 'Copied' : 'Copy'}
@@ -269,7 +269,7 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                       size="sm"
                       onClick={() => handleDeleteItem(itemKey)}
                       icon={TrashTwo}
-                      className="!h-6.5 !w-6.5 !px-0"
+                      className="!h-7 !w-7 shrink-0"
                       title="Delete Entry"
                     />
                   </div>

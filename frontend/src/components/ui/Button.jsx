@@ -15,10 +15,12 @@ export default function Button({
 }) {
   const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 active:scale-[0.98] select-none rounded-lg disabled:opacity-40 disabled:pointer-events-none disabled:transform-none';
 
+  const isIconOnly = !children && Boolean(Icon || loading);
+
   const sizeStyles = {
-    sm: 'h-7 px-2.5 text-[11px] gap-1.5',
-    md: 'h-8 px-3 text-xs gap-2',
-    lg: 'h-9.5 px-4 text-xs gap-2',
+    sm: isIconOnly ? 'h-7 w-7 p-0' : 'h-7 px-2.5 text-[11px] gap-1.5',
+    md: isIconOnly ? 'h-8 w-8 p-0' : 'h-8 px-3 text-xs gap-2',
+    lg: isIconOnly ? 'h-9.5 w-9.5 p-0' : 'h-9.5 px-4 text-xs gap-2',
   };
 
   const variantStyles = {
