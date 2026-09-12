@@ -23,8 +23,8 @@ export default function SettingsView({
   const workerOptions = [
     { label: '6 Workers (Standard)', value: 6 },
     { label: '8 Workers (Balanced)', value: 8 },
-    { label: '20 Workers (High Speed - 100 Mbps+)', value: 20 },
-    { label: '32 Workers (Ultra Speed - 200 Mbps+)', value: 32 },
+    { label: '20 Workers (High Speed)', value: 20 },
+    { label: '32 Workers (Ultra Speed)', value: 32 },
   ];
 
   const [botToken, setBotToken] = useState('');
@@ -37,7 +37,7 @@ export default function SettingsView({
   const [savingSync, setSavingSync] = useState(false);
 
   const handleSaveBot = async () => {
-    if (!botToken.trim()) {
+    if (!botToken.trim() && !botConfigured) {
       return;
     }
     setSavingBot(true);
@@ -52,6 +52,7 @@ export default function SettingsView({
   const botConfigured = botConfig?.configured === true;
   const keepSavedToken = botConfigured && !botToken.trim();
   const savedChatIDs = botConfig?.chatIDs || '';
+
   const saveCloud = async () => {
     setSavingSync(true);
     try {
@@ -63,51 +64,87 @@ export default function SettingsView({
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto py-2 select-none">
-      <div className="flex items-center gap-3 pb-5 border-b border-[var(--border-color)]">
-        <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
-          <FineTune style={{ width: 18, height: 18 }} />
+    <div className="space-y-5 max-w-4xl mx-auto select-none">
+      {/* Header Bar */}
+      <div className="flex items-center gap-3 pb-4 border-b border-[var(--border-color)]">
+        <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center shrink-0 border border-[var(--accent-border)]">
+          <FineTune className="w-5 h-5" />
         </div>
         <div>
-          <h2 className="text-lg font-bold tracking-tight">System Preferences & Settings</h2>
-          <p className="text-xs opacity-60 mt-0.5">Configure default storage, image format, worker concurrency, and Telegram remote control.</p>
+          <h2 className="text-base font-bold tracking-tight text-[var(--text-main)]">System Preferences & Settings</h2>
+          <p className="text-xs text-[var(--text-sub)]">Default storage, image format, concurrency profile, and cloud synchronization.</p>
         </div>
       </div>
 
-      <div className="glass-card rounded-2xl p-5 space-y-5 border border-[var(--border-color)]">
-        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[var(--border-color)]">
+      {/* Cloud Sync Section */}
+      <div className="glass-card rounded-2xl p-5 space-y-4 border border-[var(--border-color)]">
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--border-color)]">
           <div>
-            <h3 className="text-xs font-semibold">Cloud Sync (Cloudflare D1)</h3>
-            <p className="text-[10px] opacity-60 mt-1">Sync bookmarks, history, and preferences across your computers.</p>
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">Cloud Sync (Cloudflare D1)</h3>
+            <p className="text-[11px] text-[var(--text-sub)]">Synchronize bookmarks, download history, and preferences across devices.</p>
           </div>
           <Badge variant={cloudStatus === 'online' ? 'emerald' : cloudStatus === 'disabled' ? 'amber' : 'rose'}>
             {cloudStatus === 'online' ? 'Cloud Online' : cloudStatus === 'disabled' ? 'Not Configured' : cloudStatus === 'checking' ? 'Checking...' : 'Offline'}
           </Badge>
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <input value={syncURL} onChange={(e) => setSyncURL(e.target.value)} placeholder={cloudConfig?.url || 'https://sync.example.com'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
-          <input type="password" value={syncToken} onChange={(e) => setSyncToken(e.target.value)} placeholder={cloudConfig?.token || 'Personal sync token'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
-          <input value={syncUserID} onChange={(e) => setSyncUserID(e.target.value)} placeholder={cloudConfig?.userID || 'default'} className="h-8 px-3 text-xs rounded-lg glass-input font-mono" />
-          <input value={syncDeviceName} onChange={(e) => setSyncDeviceName(e.target.value)} placeholder={cloudConfig?.deviceName || 'This computer'} className="h-8 px-3 text-xs rounded-lg glass-input" />
+          <input
+            value={syncURL}
+            onChange={(e) => setSyncURL(e.target.value)}
+            placeholder={cloudConfig?.url || 'https://sync.example.com'}
+            className="h-8.5 px-3 text-xs rounded-lg glass-input font-mono"
+          />
+          <input
+            type="password"
+            value={syncToken}
+            onChange={(e) => setSyncToken(e.target.value)}
+            placeholder={cloudConfig?.token ? 'Saved (leave empty to keep)' : 'Personal sync token'}
+            className="h-8.5 px-3 text-xs rounded-lg glass-input font-mono"
+          />
+          <input
+            value={syncUserID}
+            onChange={(e) => setSyncUserID(e.target.value)}
+            placeholder={cloudConfig?.userID || 'default'}
+            className="h-8.5 px-3 text-xs rounded-lg glass-input font-mono"
+          />
+          <input
+            value={syncDeviceName}
+            onChange={(e) => setSyncDeviceName(e.target.value)}
+            placeholder={cloudConfig?.deviceName || 'This computer'}
+            className="h-8.5 px-3 text-xs rounded-lg glass-input"
+          />
         </div>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] opacity-60">The token is stored in the local Go configuration and is never sent to the frontend bundle.</p>
-          <Button variant="primary" size="sm" onClick={saveCloud} loading={savingSync} disabled={savingSync} className="!h-8 shrink-0">Save & Sync</Button>
+
+        <div className="flex items-center justify-between gap-3 pt-1">
+          <p className="text-[10px] text-[var(--text-muted-custom)]">
+            Tokens are stored securely in local Go configuration and never exposed to the frontend bundle.
+          </p>
+          <Button
+            variant="primary"
+            size="sm"
+            onClick={saveCloud}
+            loading={savingSync}
+            disabled={savingSync}
+            className="!h-8 shrink-0"
+          >
+            Save & Sync
+          </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Storage & Format */}
-        <div className="glass-card rounded-2xl p-5 space-y-5 border border-[var(--border-color)]">
-          <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--border-color)]">
-            <Folder className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-xs font-semibold">Storage & Output Format</h3>
+        {/* Storage & Format Card */}
+        <div className="glass-card rounded-2xl p-5 space-y-4 border border-[var(--border-color)]">
+          <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-color)]">
+            <Folder className="w-4 h-4 text-[var(--accent)]" />
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">Storage & Output Format</h3>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Default Output Directory</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)]">Default Output Directory</label>
             <div className="flex items-center gap-2">
-              <div className="h-8 px-3 flex items-center rounded-lg glass-input text-xs flex-1 truncate font-mono">
+              <div className="h-8 px-3 flex items-center rounded-lg glass-input text-xs flex-1 truncate font-mono text-[var(--text-sub)]">
                 {outputDir || "Select directory..."}
               </div>
               <Button
@@ -121,35 +158,38 @@ export default function SettingsView({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
-              <ImageRectangle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Default Image Format
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)] flex items-center gap-1.5">
+              <ImageRectangle className="w-3.5 h-3.5 text-[var(--accent)]" /> Default Image Format
             </label>
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
+            <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--btn-secondary-bg)] border border-[var(--border-color)]">
               {formats.map((fmt) => (
-                <Button
+                <button
                   key={fmt}
-                  variant={selectedFormat === fmt ? 'primary' : 'ghost'}
-                  size="sm"
+                  type="button"
                   onClick={() => setSelectedFormat(fmt)}
-                  className="flex-1 !h-7 !px-1"
+                  className={`flex-1 h-7 rounded-md text-xs font-medium transition-all ${
+                    selectedFormat === fmt
+                      ? 'bg-[var(--accent)] text-white shadow-sm font-semibold'
+                      : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                  }`}
                 >
                   {fmt}
-                </Button>
+                </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Performance & Concurrency */}
-        <div className="glass-card rounded-2xl p-5 space-y-5 border border-[var(--border-color)]">
-          <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--border-color)]">
-            <Microchip className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-xs font-semibold">Performance & Concurrency</h3>
+        {/* Performance Card */}
+        <div className="glass-card rounded-2xl p-5 space-y-4 border border-[var(--border-color)]">
+          <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-color)]">
+            <Microchip className="w-4 h-4 text-[var(--accent)]" />
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">Performance & Concurrency</h3>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Worker Concurrency Profile</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)]">Worker Concurrency</label>
             <Dropdown
               value={selectedWorkers}
               onChange={(v) => setSelectedWorkers(Number(v))}
@@ -157,7 +197,7 @@ export default function SettingsView({
             />
           </div>
 
-          <div className="pt-1">
+          <div className="pt-2">
             <Button
               variant="secondary"
               size="sm"
@@ -165,59 +205,59 @@ export default function SettingsView({
               icon={ShieldCheck}
               className="w-full !h-8"
             >
-              Force Refresh Catalog Cache
+              Purge Catalog Cache & Sync
             </Button>
           </div>
         </div>
       </div>
 
       {/* Telegram Remote Control */}
-      <div className="glass-card rounded-2xl p-5 space-y-5 border border-[var(--border-color)]">
-        <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[var(--border-color)]">
+      <div className="glass-card rounded-2xl p-5 space-y-4 border border-[var(--border-color)]">
+        <div className="flex items-center justify-between gap-2 pb-2 border-b border-[var(--border-color)]">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-xs font-semibold">Telegram Remote Control</h3>
+            <BookOpen className="w-4 h-4 text-[var(--accent)]" />
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">Telegram Remote Control</h3>
           </div>
           <Badge variant={botOnline ? 'emerald' : botConfigured ? 'amber' : 'rose'}>
-            <span className={`w-2 h-2 rounded-full ${botOnline ? 'bg-emerald-500 animate-pulse' : botConfigured ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
+            <span className={`w-1.5 h-1.5 rounded-full ${botOnline ? 'bg-emerald-500' : botConfigured ? 'bg-amber-500' : 'bg-rose-500'}`}></span>
             {botOnline ? 'Bot Online' : botConfigured ? 'Bot Offline' : 'Not Configured'}
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Bot Token (from @BotFather)</label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)]">Bot Token (from @BotFather)</label>
             <input
               type="password"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
               placeholder={botConfig?.token ? `Saved: ${botConfig.token}` : "123456:ABC-DEF..."}
-              className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
+              className="w-full h-8.5 px-3 text-xs rounded-lg glass-input font-mono"
             />
             {botConfigured && (
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                ✓ Token saved — leave the field empty to keep using the saved token
+              <p className="text-[10px] text-emerald-500 flex items-center gap-1">
+                ✓ Token saved — leave empty to keep using saved token
               </p>
             )}
           </div>
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Chat ID Allowlist (comma separated)</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)]">Chat ID Allowlist (comma separated)</label>
             <input
               type="text"
               value={botChatIDs || savedChatIDs}
               onChange={(e) => setBotChatIDs(e.target.value)}
               placeholder={savedChatIDs ? `Saved: ${savedChatIDs}` : "123456789"}
-              className="w-full h-8 px-3 text-xs rounded-lg glass-input font-mono"
+              className="w-full h-8.5 px-3 text-xs rounded-lg glass-input font-mono"
             />
             {savedChatIDs && !botChatIDs && (
-              <p className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">✓ {savedChatIDs} registered</p>
+              <p className="text-[10px] text-emerald-500 flex items-center gap-1">✓ {savedChatIDs} registered</p>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <p className="text-[10px] opacity-60 leading-relaxed max-w-md">
-            Token & chat ID are stored permanently — no need to re-enter them every time you open the app. The bot starts automatically when the app is opened. Message the bot <code className="font-mono">/start</code> to see your chat ID. Features: check webtoon, catalog, download, stop, status, change output folder, benchmark, history.
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-1">
+          <p className="text-[10px] text-[var(--text-muted-custom)] leading-relaxed max-w-md">
+            The bot auto-starts on app launch. Message <code className="font-mono text-[var(--text-sub)]">/start</code> to your bot to retrieve your Chat ID.
           </p>
           <Button
             variant="primary"
@@ -225,7 +265,6 @@ export default function SettingsView({
             onClick={handleSaveBot}
             loading={savingBot}
             disabled={(!botToken.trim() && !botConfigured) || savingBot}
-            icon={BookOpen}
             className="!h-8 shrink-0"
           >
             {savingBot ? 'Saving...' : keepSavedToken ? 'Restart Bot' : 'Save & Start Bot'}

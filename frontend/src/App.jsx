@@ -567,7 +567,7 @@ export default function App() {
   };
 
   return (
-    <div className={`theme-root flex flex-col h-screen overflow-hidden ${theme === 'light' ? 'light-theme bg-[#f5f5f7] text-[#1d1d1f]' : 'dark bg-[#141416] text-[#ededef]'}`}>
+    <div className={`theme-root flex flex-col h-screen overflow-hidden ${theme === 'light' ? 'light-theme bg-[var(--bg-main)] text-[var(--text-main)]' : 'dark bg-[var(--bg-main)] text-[var(--text-main)]'}`}>
       {/* Header Toolbar */}
       <WindowHeader
         onSelectFolder={handleSelectFolder}

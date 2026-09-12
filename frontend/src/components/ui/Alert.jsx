@@ -9,19 +9,19 @@ export default function Alert({
 }) {
   const styles = {
     info: {
-      container: 'bg-blue-500/10 text-blue-900 dark:text-blue-200 border-blue-500/20',
+      container: 'bg-blue-500/10 text-blue-800 dark:text-blue-200 border-blue-500/25',
       icon: <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />,
     },
     success: {
-      container: 'bg-emerald-500/10 text-emerald-900 dark:text-emerald-200 border-emerald-500/20',
+      container: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 border-emerald-500/25',
       icon: <CheckCircle className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />,
     },
     warning: {
-      container: 'bg-amber-500/10 text-amber-900 dark:text-amber-200 border-amber-500/20',
+      container: 'bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/25',
       icon: <DangerTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />,
     },
     error: {
-      container: 'bg-rose-500/10 text-rose-900 dark:text-rose-200 border-rose-500/20',
+      container: 'bg-rose-500/10 text-rose-800 dark:text-rose-200 border-rose-500/25',
       icon: <XCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />,
     },
   };
@@ -29,10 +29,10 @@ export default function Alert({
   const current = styles[type] || styles.info;
 
   return (
-    <div className={`p-3.5 rounded-2xl border flex items-start gap-3 text-xs leading-relaxed ${current.container} ${className}`}>
+    <div className={`p-3 rounded-xl border flex items-start gap-3 text-xs leading-relaxed ${current.container} ${className}`}>
       {current.icon}
       <div className="flex-1 min-w-0">
-        {title && <h4 className="font-bold text-xs mb-0.5">{title}</h4>}
+        {title && <h4 className="font-semibold text-xs mb-0.5">{title}</h4>}
         <div className="opacity-90">{children}</div>
       </div>
     </div>

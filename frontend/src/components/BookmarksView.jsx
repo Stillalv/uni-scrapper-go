@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Heart, BookOpen, Trash, Search, ExternalLink, LayersTwo, Sparkles, Filter } from '@mynaui/icons-react';
+import { Heart, BookOpen, Trash, Search, LayersTwo, Filter } from '@mynaui/icons-react';
 import webtoonLogo from '../assets/logo/WEBTOON_Logo.png';
 import mangaplusLogo from '../assets/logo/mangaplus.png';
 import Button from './ui/Button';
@@ -17,19 +17,17 @@ export default function BookmarksView({
 
   const catalogOptions = [
     { id: 'all', label: 'All Catalogs' },
-    { id: 'webtoon_id', label: 'Webtoon (ID)', flag: 'fi-id', logo: webtoonLogo },
-    { id: 'webtoon_en', label: 'Webtoon (EN)', flag: 'fi-gb', logo: webtoonLogo },
-    { id: 'naver_ko', label: 'Naver (KO)', flag: 'fi-kr', logo: webtoonLogo },
-    { id: 'mangaplus_id', label: 'MANGA Plus (ID)', flag: 'fi-id', logo: mangaplusLogo },
+    { id: 'webtoon_id', label: 'Webtoon (ID)', flag: 'fi-id' },
+    { id: 'webtoon_en', label: 'Webtoon (EN)', flag: 'fi-gb' },
+    { id: 'naver_ko', label: 'Naver (KO)', flag: 'fi-kr' },
+    { id: 'mangaplus_id', label: 'MANGA Plus (ID)', flag: 'fi-id' },
   ];
 
-  // Count bookmarks per catalog
   const getCatalogCount = (catId) => {
     if (catId === 'all') return bookmarks.length;
     return bookmarks.filter((b) => (b.source || 'webtoon_id') === catId).length;
   };
 
-  // Filter bookmarks by catalog & search term
   const filteredBookmarks = bookmarks.filter((comic) => {
     const matchesCatalog =
       activeCatalogFilter === 'all' || (comic.source || 'webtoon_id') === activeCatalogFilter;
@@ -41,39 +39,41 @@ export default function BookmarksView({
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-w-6xl mx-auto select-none">
       {/* Header Banner */}
-      <div className="glass-card rounded-2xl p-5 border border-[var(--border-color)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-3">
-          <Heart className="w-5 h-5 text-pink-500 fill-current shrink-0" />
+          <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0 border border-rose-500/20">
+            <Heart className="w-5 h-5 fill-current" />
+          </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">Bookmarked Comics</h1>
-            <p className="text-xs opacity-60">Your saved collection categorized by catalog provider</p>
+            <h1 className="text-base font-bold tracking-tight text-[var(--text-main)]">Bookmarked Comics</h1>
+            <p className="text-xs text-[var(--text-sub)]">Your saved collection across all comic providers</p>
           </div>
         </div>
 
         {/* Search Bar & Total Counter */}
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-2.5 w-full md:w-auto">
           <div className="relative flex-1 md:w-64">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 opacity-40 pointer-events-none" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted-custom)] pointer-events-none" />
             <input
               type="text"
               placeholder="Search bookmarks..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-1.5 rounded-xl text-xs bg-black/5 dark:bg-white/5 border border-[var(--border-color)] focus:outline-none focus:border-blue-500 transition-all"
+              className="w-full h-8 pl-9 pr-3 rounded-lg text-xs glass-input focus:outline-none"
             />
           </div>
-          <Badge variant="rose" className="shrink-0 !py-1">
+          <Badge variant="rose" className="shrink-0">
             {bookmarks.length} saved
           </Badge>
         </div>
       </div>
 
       {/* Catalog Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[var(--border-color)]">
-        <span className="text-xs font-medium opacity-50 flex items-center gap-1 shrink-0 mr-1">
-          <Filter className="w-3.5 h-3.5" /> Catalog:
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+        <span className="text-xs text-[var(--text-muted-custom)] font-medium flex items-center gap-1 shrink-0 mr-1">
+          <Filter className="w-3.5 h-3.5" /> Filter:
         </span>
         {catalogOptions.map((cat) => {
           const count = getCatalogCount(cat.id);
@@ -83,18 +83,17 @@ export default function BookmarksView({
               key={cat.id}
               type="button"
               onClick={() => setActiveCatalogFilter(cat.id)}
-              className={`h-8.5 px-3 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shrink-0 select-none border ${
+              className={`h-7 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shrink-0 select-none border ${
                 isActive
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                  : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)] text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5'
+                  ? 'bg-[var(--accent)] text-white border-[var(--accent)] shadow-sm font-semibold'
+                  : 'bg-[var(--btn-secondary-bg)] border-[var(--border-color)] text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--btn-secondary-hover)]'
               }`}
             >
-              {cat.flag && <span className={`fi ${cat.flag} rounded-[2px] shadow-sm w-4 h-3 shrink-0`}></span>}
-              {cat.logo && <img src={cat.logo} alt={cat.label} className="w-4 h-4 object-contain shrink-0" />}
+              {cat.flag && <span className={`fi ${cat.flag} rounded-[2px] w-3 h-2 shrink-0`}></span>}
               <span className="truncate">{cat.label}</span>
               <span
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-0.5 ${
-                  isActive ? 'bg-white/20 text-white' : 'bg-black/10 dark:bg-white/10 text-[var(--text-sub)]'
+                className={`text-[10px] font-mono px-1.5 py-0.2 rounded-full ${
+                  isActive ? 'bg-white/20 text-white' : 'bg-black/5 dark:bg-white/10 text-[var(--text-muted-custom)]'
                 }`}
               >
                 {count}
@@ -106,7 +105,7 @@ export default function BookmarksView({
 
       {/* Grid of Bookmarked Comic Cards */}
       {filteredBookmarks.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
           {filteredBookmarks.map((comic) => {
             const isMangaPlus = comic.source === 'mangaplus_id';
             const isNaver = comic.source === 'naver_ko' || comic.source === 'naver';
@@ -128,46 +127,45 @@ export default function BookmarksView({
             return (
               <div
                 key={comic.id || comic.title_no || comic.url}
-                className="glass-card rounded-2xl p-4 border border-[var(--border-color)] shadow-sm hover:border-blue-500/50 transition-all flex flex-col justify-between group space-y-3"
+                className="glass-card rounded-xl p-3 border border-[var(--border-color)] hover:border-[var(--border-hover)] transition-all flex flex-col justify-between group space-y-2.5"
               >
-                {/* Cover Image & Info Header */}
-                <div className="flex items-start gap-3">
-                  <div className="relative w-16 h-20 shrink-0 rounded-xl overflow-hidden bg-black/10 dark:bg-white/5 border border-[var(--border-color)] flex items-center justify-center p-1">
+                {/* Cover Image & Info */}
+                <div className="flex items-start gap-2.5">
+                  <div className="relative w-14 h-18 shrink-0 rounded-lg overflow-hidden bg-[var(--btn-secondary-bg)] border border-[var(--border-color)] flex items-center justify-center">
                     {comic.cover ? (
                       <img
                         src={`/api/proxy-image?url=${encodeURIComponent(comic.cover)}`}
                         alt={comic.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300 rounded-lg"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-all duration-300"
                         onError={(e) => {
                           e.target.onerror = null;
                           e.target.src = sourceLogo;
-                          e.target.className = 'w-8 h-8 object-contain opacity-40';
+                          e.target.className = 'w-6 h-6 object-contain opacity-40';
                         }}
                       />
                     ) : (
-                      <img src={sourceLogo} alt={comic.title} className="w-8 h-8 object-contain opacity-40" />
+                      <img src={sourceLogo} alt={comic.title} className="w-6 h-6 object-contain opacity-40" />
                     )}
                   </div>
 
-                  <div className="min-w-0 flex-1 space-y-1">
-                    <div className="text-[11px] text-[var(--text-sub)] opacity-70 truncate font-medium flex items-center gap-1.5">
-                      <span className={`fi ${flagClass} rounded-sm shrink-0`}></span>
-                      <img src={sourceLogo} alt={sourceLabel} className="w-3 h-3 object-contain shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-0.5">
+                    <div className="text-[10px] text-[var(--text-muted-custom)] truncate flex items-center gap-1">
+                      <span className={`fi ${flagClass} rounded-xs shrink-0`}></span>
                       <span className="truncate">{sourceLabel}</span>
                     </div>
 
-                    <h3 className="text-xs font-semibold tracking-tight leading-snug line-clamp-2 title-hover group-hover:text-blue-500 transition-colors" title={comic.title}>
+                    <h3 className="text-xs font-semibold text-[var(--text-main)] truncate group-hover:text-[var(--accent)] transition-colors leading-tight" title={comic.title}>
                       {comic.title}
                     </h3>
 
-                    <p className="text-[11px] opacity-50 truncate">
+                    <p className="text-[11px] text-[var(--text-sub)] truncate">
                       {comic.genre || 'Comic'}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions Footer */}
-                <div className="pt-2 border-t border-[var(--border-color)] flex items-center gap-2">
+                <div className="pt-2 border-t border-[var(--border-color)] flex items-center gap-1.5">
                   <Button
                     variant="primary"
                     size="sm"
@@ -176,7 +174,7 @@ export default function BookmarksView({
                       onNavigateScraper();
                     }}
                     icon={LayersTwo}
-                    className="flex-1 !h-8"
+                    className="flex-1 !h-7.5"
                   >
                     Select & Download
                   </Button>
@@ -187,7 +185,7 @@ export default function BookmarksView({
                     onClick={() => onRemoveBookmark(comic)}
                     title="Remove from Bookmarks"
                     icon={Trash}
-                    className="!h-8 !w-8 !px-0"
+                    className="!h-7.5 !w-7.5 !px-0"
                   />
                 </div>
               </div>
@@ -196,14 +194,14 @@ export default function BookmarksView({
         </div>
       ) : (
         /* Empty State */
-        <div className="glass-card rounded-2xl p-12 border border-[var(--border-color)] text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-pink-600/10 text-pink-600 dark:text-pink-400 flex items-center justify-center mx-auto border border-pink-500/20">
-            <Heart className="w-8 h-8 opacity-60" />
+        <div className="glass-card rounded-2xl p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/20">
+            <Heart className="w-6 h-6 opacity-60" />
           </div>
 
           <div className="space-y-1 max-w-sm mx-auto">
-            <h3 className="text-sm font-bold">No Bookmarks Found</h3>
-            <p className="text-xs opacity-60">
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">No Bookmarks Found</h3>
+            <p className="text-xs text-[var(--text-sub)]">
               {searchTerm || activeCatalogFilter !== 'all'
                 ? 'No bookmarks match your search filter or catalog selection.'
                 : 'You have not added any comics to your bookmarks yet.'}
@@ -212,10 +210,11 @@ export default function BookmarksView({
 
           <Button
             variant="primary"
+            size="sm"
             onClick={onNavigateCatalog}
             icon={BookOpen}
           >
-            Browse Catalog Explorer
+            Browse Catalog
           </Button>
         </div>
       )}

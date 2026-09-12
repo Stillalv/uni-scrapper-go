@@ -13,20 +13,20 @@ export default function Button({
   type = 'button',
   ...props
 }) {
-  const baseStyles = 'inline-flex items-center justify-center font-semibold transition-all active:scale-[0.98] select-none rounded-xl disabled:opacity-50 disabled:pointer-events-none disabled:transform-none';
+  const baseStyles = 'inline-flex items-center justify-center font-medium transition-all duration-150 active:scale-[0.98] select-none rounded-lg disabled:opacity-40 disabled:pointer-events-none disabled:transform-none';
 
   const sizeStyles = {
     sm: 'h-7 px-2.5 text-[11px] gap-1.5',
-    md: 'h-8.5 px-3.5 text-xs gap-2',
-    lg: 'h-10 px-4 text-xs gap-2',
+    md: 'h-8 px-3 text-xs gap-2',
+    lg: 'h-9.5 px-4 text-xs gap-2',
   };
 
   const variantStyles = {
-    primary: 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm border border-blue-400/20',
-    secondary: 'bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-[var(--text-main)] border border-[var(--border-color)]',
-    ghost: 'text-[var(--text-main)] opacity-70 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/5',
-    danger: 'bg-red-600 hover:bg-red-500 text-white shadow-sm border border-red-400/20',
-    outline: 'border border-[var(--border-color)] text-[var(--text-main)] hover:bg-black/5 dark:hover:bg-white/5',
+    primary: 'bg-[var(--accent)] hover:opacity-90 text-white shadow-sm',
+    secondary: 'bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover)] text-[var(--text-main)] border border-[var(--border-color)]',
+    ghost: 'text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--btn-secondary-bg)]',
+    danger: 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm',
+    outline: 'border border-[var(--border-color)] text-[var(--text-main)] hover:bg-[var(--btn-secondary-bg)]',
   };
 
   return (

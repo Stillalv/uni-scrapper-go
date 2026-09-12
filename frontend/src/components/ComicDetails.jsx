@@ -27,8 +27,8 @@ export default function ComicDetails({
   const workerOptions = [
     { label: '6 Workers (Standard)', value: 6 },
     { label: '8 Workers (Balanced)', value: 8 },
-    { label: '20 Workers (High Speed - 100 Mbps+)', value: 20 },
-    { label: '32 Workers (Ultra Speed - 200 Mbps+)', value: 32 },
+    { label: '20 Workers (High Speed)', value: 20 },
+    { label: '32 Workers (Ultra Speed)', value: 32 },
   ];
   const episodes = webtoonInfo?.Episodes || [];
   const [chapterFilter, setChapterFilter] = React.useState('');
@@ -103,83 +103,86 @@ export default function ComicDetails({
   };
 
   return (
-    <div className="glass-card rounded-2xl p-5 space-y-5 shadow-lg border border-[var(--border-color)] select-none">
-      {/* Top Section: URL Input & Fetch Button */}
-      <div className="space-y-2">
-        <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center justify-between">
+    <div className="glass-card rounded-2xl p-5 space-y-4 shadow-sm border border-[var(--border-color)] select-none">
+      {/* URL Input & Fetch Omnibox */}
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)] flex items-center justify-between">
           <span>Webtoon URL or Title ID</span>
-          <span className="text-[10px] opacity-40 font-normal normal-case tracking-normal">e.g. 9523 or https://www.webtoons.com/...</span>
+          <span className="opacity-60 normal-case tracking-normal">e.g. 9523 or full webtoon URL</span>
         </label>
         <div className="flex items-center gap-2">
           <input
             type="text"
             value={comicUrl}
             onChange={(e) => setComicUrl(e.target.value)}
-            placeholder="Enter Webtoon URL or Title ID..."
-            className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono min-w-0"
+            placeholder="Paste Webtoon URL or enter Title ID..."
+            className="flex-1 h-8.5 px-3 text-xs rounded-lg glass-input font-mono min-w-0"
           />
           <Button
             variant="primary"
-            size="sm"
+            size="md"
             onClick={onCheckInfo}
             loading={checkingInfo}
             disabled={checkingInfo || isDownloading || !comicUrl}
             icon={Search}
-            className="!h-8 shrink-0"
+            className="!h-8.5 shrink-0"
           >
             {checkingInfo ? 'Checking...' : 'Fetch Info'}
           </Button>
         </div>
       </div>
 
-      {/* Metadata Display */}
+      {/* Metadata Banner */}
       {webtoonInfo && (
-        <div className="p-3.5 rounded-xl bg-black/[0.02] dark:bg-white/[0.03] border border-[var(--border-color)] flex items-center justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <div className="text-sm font-semibold flex items-center gap-2 tracking-tight">
-              <LayersTwo className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+        <div className="p-3 rounded-xl bg-[var(--btn-secondary-bg)] border border-[var(--border-color)] flex items-center justify-between gap-3 animate-slide-up">
+          <div className="space-y-0.5 min-w-0">
+            <div className="text-xs font-semibold text-[var(--text-main)] flex items-center gap-2">
+              <LayersTwo className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
               <span className="truncate">{webtoonInfo.Title}</span>
             </div>
-            <div className="text-xs opacity-60 flex items-center gap-2.5 flex-wrap">
-              <span>Language: <strong className="uppercase font-semibold">{webtoonInfo.Lang}</strong></span>
+            <div className="text-[11px] text-[var(--text-sub)] flex items-center gap-2 flex-wrap">
+              <span>Lang: <strong className="uppercase font-semibold text-[var(--text-main)]">{webtoonInfo.Lang}</strong></span>
               <span className="opacity-30">•</span>
-              <span>Genre: <strong className="capitalize font-semibold">{webtoonInfo.Genre}</strong></span>
+              <span>Genre: <strong className="capitalize font-semibold text-[var(--text-main)]">{webtoonInfo.Genre}</strong></span>
               <span className="opacity-30">•</span>
-              <span>Total: <strong className="text-blue-600 dark:text-blue-400 font-bold">{webtoonInfo.TotalEpisodes} Chapters</strong> ({webtoonInfo.EpisodeRange})</span>
+              <span>Total: <strong className="text-[var(--accent)] font-semibold">{webtoonInfo.TotalEpisodes} Chapters</strong></span>
             </div>
           </div>
           <Badge variant="emerald" icon={CheckCircle} className="shrink-0">
-            Validated
+            Ready
           </Badge>
         </div>
       )}
 
-      {/* Grid Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Format Pills */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
-            <ImageRectangle className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Image Format
+      {/* Controls Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {/* Format Selector */}
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)] flex items-center gap-1.5">
+            <ImageRectangle className="w-3.5 h-3.5 text-[var(--accent)]" /> Image Format
           </label>
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-[var(--btn-secondary-bg)] border border-[var(--border-color)]">
             {formats.map((fmt) => (
-              <Button
+              <button
                 key={fmt}
-                variant={selectedFormat === fmt ? 'primary' : 'ghost'}
-                size="sm"
+                type="button"
                 onClick={() => setSelectedFormat(fmt)}
-                className="flex-1 !h-7 !px-1"
+                className={`flex-1 h-7 rounded-md text-xs font-medium transition-all ${
+                  selectedFormat === fmt
+                    ? 'bg-[var(--accent)] text-white shadow-sm font-semibold'
+                    : 'text-[var(--text-sub)] hover:text-[var(--text-main)]'
+                }`}
               >
                 {fmt}
-              </Button>
+              </button>
             ))}
           </div>
         </div>
 
         {/* Worker Performance */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
-            <Microchip className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Worker Profile
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)] flex items-center gap-1.5">
+            <Microchip className="w-3.5 h-3.5 text-[var(--accent)]" /> Worker Concurrency
           </label>
           <Dropdown
             value={selectedWorkers}
@@ -189,9 +192,9 @@ export default function ComicDetails({
         </div>
 
         {/* Chapter Selection Trigger */}
-        <div className="space-y-2">
-          <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60 flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Chapter Selection
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)] flex items-center gap-1.5">
+            <BookOpen className="w-3.5 h-3.5 text-[var(--accent)]" /> Chapter Range
           </label>
           <button
             type="button"
@@ -199,19 +202,20 @@ export default function ComicDetails({
             disabled={!episodes.length}
             className="w-full h-8 flex items-center justify-between gap-2 px-3 text-xs rounded-lg font-medium transition-all border select-none
               bg-[var(--input-bg)] border-[var(--border-color)] text-[var(--text-main)]
-              hover:border-blue-500/40 disabled:opacity-50 disabled:pointer-events-none"
+              hover:border-[var(--border-hover)] disabled:opacity-50 disabled:pointer-events-none"
           >
             <span className="truncate text-left">
-              {episodes.length ? `${selectedCount} of ${episodes.length} selected` : 'Fetch info first'}
+              {episodes.length ? `${selectedCount} of ${episodes.length} chapters` : 'Fetch info first'}
             </span>
-            <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-50" />
+            <ChevronDown className="w-3.5 h-3.5 shrink-0 text-[var(--text-sub)]" />
           </button>
         </div>
       </div>
 
+      {/* Chapter Selection Modal */}
       {showChapterSelection && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/45 dark:bg-black/65 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/50 backdrop-blur-sm p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="chapter-selection-title"
@@ -219,34 +223,34 @@ export default function ComicDetails({
             if (event.target === event.currentTarget) setShowChapterSelection(false);
           }}
         >
-          <div className="w-full max-w-3xl max-h-[calc(100vh-4rem)] glass-panel rounded-2xl border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden">
-            <div className="p-4 border-b border-[var(--border-color)] flex items-center justify-between gap-3">
+          <div className="w-full max-w-2xl max-h-[calc(100vh-6rem)] glass-panel rounded-2xl border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden animate-slide-up">
+            <div className="p-3.5 border-b border-[var(--border-color)] flex items-center justify-between gap-3">
               <div>
-                <h2 id="chapter-selection-title" className="text-sm font-bold">Chapter Selection</h2>
-                <p className="text-[11px] opacity-55 mt-1">Choose the chapters you want to download.</p>
+                <h2 id="chapter-selection-title" className="text-xs font-semibold text-[var(--text-main)]">Select Chapters</h2>
+                <p className="text-[11px] text-[var(--text-sub)]">Choose specific chapters or use smart range expressions.</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowChapterSelection(false)}
-                className="p-1.5 rounded-lg opacity-60 hover:opacity-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+                className="p-1 rounded-lg text-[var(--text-sub)] hover:text-[var(--text-main)] hover:bg-[var(--btn-secondary-bg)] transition-colors"
                 aria-label="Close chapter selection"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex flex-col gap-2 p-3 border-b border-[var(--border-color)]">
+            <div className="flex flex-col gap-2 p-3 border-b border-[var(--border-color)] bg-[var(--btn-secondary-bg)]">
               <div className="flex flex-col sm:flex-row gap-2">
                 <input
                   type="search"
                   value={chapterFilter}
                   onChange={(e) => setChapterFilter(e.target.value)}
-                  placeholder="Search chapters..."
+                  placeholder="Filter chapters by title or number..."
                   className="flex-1 h-8 px-3 text-xs rounded-lg glass-input"
                 />
                 <div className="flex gap-1.5">
                   <Button
-                    variant={allSelected ? 'primary' : 'ghost'}
+                    variant={allSelected ? 'primary' : 'secondary'}
                     size="sm"
                     onClick={selectAllChapters}
                     disabled={!episodes.length || allSelected}
@@ -255,13 +259,13 @@ export default function ComicDetails({
                     Select all
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
                     onClick={clearChapters}
                     disabled={!selectedCount}
                     className="!h-8"
                   >
-                    Unselect all
+                    Clear
                   </Button>
                 </div>
               </div>
@@ -273,7 +277,7 @@ export default function ComicDetails({
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') applySmartSelection();
                   }}
-                  placeholder="Smart Select: 4-10, 12, 000.5"
+                  placeholder="Smart range: 1-10, 15, 20"
                   className="flex-1 h-8 px-3 text-xs rounded-lg glass-input font-mono"
                 />
                 <Button
@@ -282,7 +286,7 @@ export default function ComicDetails({
                   onClick={applySmartSelection}
                   className="!h-8"
                 >
-                  Apply Smart Select
+                  Apply
                 </Button>
               </div>
             </div>
@@ -293,28 +297,32 @@ export default function ComicDetails({
                 return (
                   <label
                     key={episode.episode_no}
-                    className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs cursor-pointer transition-colors ${checked ? 'bg-blue-600/10 text-blue-700 dark:text-blue-300' : 'hover:bg-black/5 dark:hover:bg-white/5'}`}
+                    className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs cursor-pointer transition-colors ${
+                      checked
+                        ? 'bg-[var(--accent-soft)] text-[var(--accent)] font-medium'
+                        : 'hover:bg-[var(--btn-secondary-bg)] text-[var(--text-main)]'
+                    }`}
                   >
                     <input
                       type="checkbox"
                       checked={checked}
                       onChange={() => toggleChapter(episode.episode_no)}
-                      className="accent-blue-600"
+                      className="accent-[var(--accent)] rounded"
                     />
-                    <span className="font-mono font-semibold">{episode.ch_num || String(episode.episode_no).padStart(3, '0')}</span>
-                    <span className="truncate opacity-75">{episode.title || 'Untitled chapter'}</span>
+                    <span className="font-mono text-[11px] font-semibold">{episode.ch_num || String(episode.episode_no).padStart(3, '0')}</span>
+                    <span className="truncate text-[11px] opacity-80">{episode.title || 'Untitled'}</span>
                   </label>
                 );
               })}
               {!visibleEpisodes.length && (
-                <div className="col-span-full py-8 text-center text-xs opacity-50">
-                  {episodes.length ? 'No chapters match your search.' : 'Fetch comic info to load chapters.'}
+                <div className="col-span-full py-8 text-center text-xs text-[var(--text-muted-custom)]">
+                  {episodes.length ? 'No chapters match your search filter.' : 'Fetch comic info to load chapters.'}
                 </div>
               )}
             </div>
 
             <div className="p-3 border-t border-[var(--border-color)] flex items-center justify-between gap-3">
-              <span className="text-xs opacity-60">{selectedCount} of {episodes.length} chapters selected</span>
+              <span className="text-xs text-[var(--text-sub)]">{selectedCount} of {episodes.length} chapters selected</span>
               <Button variant="primary" size="sm" onClick={() => setShowChapterSelection(false)} className="!h-8">
                 Done
               </Button>
@@ -323,24 +331,26 @@ export default function ComicDetails({
         </div>
       , document.body)}
 
-      {/* Action Buttons */}
-      <div className="pt-4 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
+      {/* Action CTA Button */}
+      <div className="pt-2 flex items-center justify-end gap-2 border-t border-[var(--border-color)]">
         {isDownloading ? (
           <Button
             variant="danger"
+            size="md"
             onClick={onCancelDownload}
             icon={SquareSolid}
-            className="!px-5 !py-2"
+            className="!px-5 !h-9"
           >
             Stop Download
           </Button>
         ) : (
           <Button
             variant="primary"
+            size="md"
             onClick={onStartDownload}
             disabled={!webtoonInfo || checkingInfo}
             icon={PlaySolid}
-            className="!px-6 !py-2"
+            className="!px-6 !h-9"
           >
             Start Download
           </Button>

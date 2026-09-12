@@ -7,7 +7,7 @@ export default function Badge({
   className = '',
 }) {
   const variantStyles = {
-    neutral: 'bg-black/5 dark:bg-white/10 text-[var(--text-main)] border-black/5 dark:border-white/10 opacity-80',
+    neutral: 'bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/15',
     blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
     emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
     rose: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
@@ -16,7 +16,7 @@ export default function Badge({
 
   return (
     <span
-      className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-md border backdrop-blur-sm ${variantStyles[variant] || variantStyles.neutral} ${className}`}
+      className={`inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md border ${variantStyles[variant] || variantStyles.neutral} ${className}`}
     >
       {Icon && <Icon className="w-3 h-3 shrink-0" />}
       <span>{children}</span>

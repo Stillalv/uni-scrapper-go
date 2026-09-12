@@ -42,7 +42,6 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
   const totalSessions = safeHistory.length;
   const totalChaptersDownloaded = safeHistory.reduce((acc, item) => acc + (Number(item?.completedCount) || 0), 0);
   const totalImagesDownloaded = safeHistory.reduce((acc, item) => acc + (Number(item?.totalImages) || Number(item?.completedCount) || 0), 0);
-
   const totalElapsedMs = safeHistory.reduce((acc, item) => acc + (Number(item?.elapsedMs) || (Number(item?.elapsedSec) ? item.elapsedSec * 1000 : 0)), 0);
   
   const formatTotalTime = (ms) => {
@@ -58,16 +57,16 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto py-2 select-none">
+    <div className="space-y-5 max-w-5xl mx-auto select-none">
       {/* Header Bar */}
-      <div className="flex items-center justify-between gap-3 pb-5 border-b border-[var(--border-color)]">
+      <div className="flex items-center justify-between gap-3 pb-4 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
-            <ClockWaves style={{ width: 18, height: 18 }} />
+          <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center shrink-0 border border-[var(--accent-border)]">
+            <ClockWaves className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Download History & Session Performance</h2>
-            <p className="text-xs opacity-60 mt-0.5">Detailed execution logs, download duration, and speed metrics per session.</p>
+            <h2 className="text-base font-bold tracking-tight text-[var(--text-main)]">Download History & Performance</h2>
+            <p className="text-xs text-[var(--text-sub)]">Execution logs, duration, and transfer throughput per session.</p>
           </div>
         </div>
 
@@ -89,68 +88,68 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
         )}
       </div>
 
-      {/* Analytics Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="glass-card rounded-2xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 shrink-0">
-            <LayersTwo className="w-4 h-4" />
+      {/* Analytics Metric Cards (Unified, Clean Palette) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <LayersTwo className="w-4 h-4 text-[var(--accent)]" />
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold font-mono tracking-tight">{totalSessions}</div>
-            <div className="text-[9px] uppercase tracking-wider opacity-50 font-semibold">Total Sessions</div>
+            <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalSessions}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted-custom)] font-medium">Total Sessions</div>
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-amber-600/10 text-amber-600 dark:text-amber-400 shrink-0">
-            <ClockCircle className="w-4 h-4" />
+        <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <ClockCircle className="w-4 h-4 text-amber-500" />
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold font-mono tracking-tight text-amber-600 dark:text-amber-400">{formatTotalTime(totalElapsedMs)}</div>
-            <div className="text-[9px] uppercase tracking-wider opacity-50 font-semibold">Total Download Time</div>
+            <div className="text-base font-bold font-mono text-[var(--text-main)]">{formatTotalTime(totalElapsedMs)}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted-custom)] font-medium">Total Time</div>
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-emerald-600/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-            <CheckCircle className="w-4 h-4" />
+        <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <CheckCircle className="w-4 h-4 text-emerald-500" />
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold font-mono tracking-tight">{totalChaptersDownloaded}</div>
-            <div className="text-[9px] uppercase tracking-wider opacity-50 font-semibold">Chapters Downloaded</div>
+            <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalChaptersDownloaded}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted-custom)] font-medium">Chapters</div>
           </div>
         </div>
 
-        <div className="glass-card rounded-2xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 shrink-0">
-            <Lightning className="w-4 h-4" />
+        <div className="glass-card rounded-xl p-3.5 border border-[var(--border-color)] flex items-center gap-3">
+          <div className="p-2 rounded-lg bg-[var(--btn-secondary-bg)] text-[var(--text-sub)] shrink-0">
+            <Lightning className="w-4 h-4 text-[var(--accent)]" />
           </div>
           <div className="min-w-0">
-            <div className="text-lg font-bold font-mono tracking-tight">{totalImagesDownloaded.toLocaleString()}</div>
-            <div className="text-[9px] uppercase tracking-wider opacity-50 font-semibold">Total Images</div>
+            <div className="text-base font-bold font-mono text-[var(--text-main)]">{totalImagesDownloaded.toLocaleString()}</div>
+            <div className="text-[10px] uppercase tracking-wider text-[var(--text-muted-custom)] font-medium">Images</div>
           </div>
         </div>
       </div>
 
-      {/* Search Input */}
+      {/* Search Bar */}
       <div className="relative">
-        <Search className="w-4 h-4 opacity-40 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+        <Search className="w-4 h-4 text-[var(--text-muted-custom)] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
         <input
           type="text"
-          placeholder="Filter history by comic title, format, or directory..."
+          placeholder="Filter history by comic title, format, or folder..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 text-xs rounded-xl glass-input placeholder:opacity-40"
+          className="w-full h-8.5 pl-10 pr-4 text-xs rounded-xl glass-input"
         />
       </div>
 
       {/* History Session Cards List */}
       {filteredHistory.length === 0 ? (
-        <div className="p-12 text-center text-xs opacity-50 space-y-2 glass-card rounded-2xl border border-[var(--border-color)]">
+        <div className="p-12 text-center text-xs text-[var(--text-muted-custom)] space-y-2 glass-card rounded-2xl">
           <p>No download history records found.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {filteredHistory.map((item, index) => {
             const itemKey = item.id || index;
             const isStopped = item.status === 'stopped' || item.type === 'warning';
@@ -159,13 +158,12 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
             return (
               <div
                 key={itemKey}
-                className="p-4 rounded-2xl glass-card border border-[var(--border-color)] space-y-3 hover:border-blue-500/40 transition-all group"
+                className="p-3.5 rounded-xl glass-card border border-[var(--border-color)] hover:border-[var(--border-hover)] transition-all space-y-2.5"
               >
-                {/* Top Row: Title, Source/Genre Badge, Status, Elapsed Time Badge */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[var(--border-color)]">
+                {/* Top: Title & Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    {/* Thumbnail Poster Cover */}
-                    <div className="w-10 h-14 rounded-lg overflow-hidden bg-black/30 shrink-0 border border-white/10 relative">
+                    <div className="w-9 h-12 rounded-md overflow-hidden bg-[var(--btn-secondary-bg)] shrink-0 border border-[var(--border-color)]">
                       {item.coverUrl ? (
                         <img
                           src={`/api/proxy-image?url=${encodeURIComponent(item.coverUrl)}`}
@@ -182,8 +180,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                     </div>
 
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="blue">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <Badge variant="neutral">
                           {item.genre || 'COMIC'}
                         </Badge>
                         <Badge variant={isStopped ? 'amber' : 'emerald'} icon={isStopped ? DangerOctagon : CheckCircle}>
@@ -191,53 +189,52 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                         </Badge>
                       </div>
 
-                      <h3 className="text-sm font-bold truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      <h3 className="text-xs font-semibold text-[var(--text-main)] truncate" title={item.title || item.comicTitle}>
                         {item.title || item.comicTitle || 'Webtoon Download'}
                       </h3>
                     </div>
                   </div>
 
-                  {/* Elapsed Time Prominent Badge */}
-                  <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
-                    <Badge variant="amber" icon={ClockCircle} className="!px-3 !py-1.5 !text-xs font-mono font-bold">
-                      Duration: {durationDisplay}
+                  <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                    <Badge variant="neutral" icon={ClockCircle} className="font-mono">
+                      {durationDisplay}
                     </Badge>
                   </div>
                 </div>
 
-                {/* Middle Row: Detailed Performance Metrics Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 py-1 text-xs">
-                  <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
-                    <span className="text-[9px] opacity-50 uppercase tracking-wider block font-semibold">Chapters</span>
-                    <span className="font-mono font-bold">{item.completedCount || 0} / {item.totalCount || item.completedCount || 0}</span>
+                {/* Middle: Horizontal Metrics Strip */}
+                <div className="flex items-center justify-between flex-wrap gap-2 text-xs py-1.5 px-2.5 rounded-lg bg-[var(--btn-secondary-bg)] border border-[var(--border-color)]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[var(--text-muted-custom)] uppercase font-medium">Chapters:</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--text-main)]">{item.completedCount || 0} / {item.totalCount || item.completedCount || 0}</span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
-                    <span className="text-[9px] opacity-50 uppercase tracking-wider block font-semibold">Total Images</span>
-                    <span className="font-mono font-bold">{item.totalImages || item.completedCount || 0}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[var(--text-muted-custom)] uppercase font-medium">Images:</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--text-main)]">{item.totalImages || item.completedCount || 0}</span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
-                    <span className="text-[9px] opacity-50 uppercase tracking-wider block font-semibold">Avg Speed</span>
-                    <span className="font-mono font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[var(--text-muted-custom)] uppercase font-medium">Speed:</span>
+                    <span className="font-mono text-xs font-semibold text-[var(--accent)] flex items-center gap-1">
                       <Zap className="w-3 h-3" /> {item.avgSpeed ? `${item.avgSpeed} imgs/s` : '-'}
                     </span>
                   </div>
 
-                  <div className="p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--border-color)]">
-                    <span className="text-[9px] opacity-50 uppercase tracking-wider block font-semibold">Config / Format</span>
-                    <span className="font-mono font-bold">{item.workers || 6} workers • {item.format || 'WEBP'}</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] text-[var(--text-muted-custom)] uppercase font-medium">Config:</span>
+                    <span className="font-mono text-[11px] text-[var(--text-sub)]">{item.workers || 6}w • {item.format || 'WEBP'}</span>
                   </div>
                 </div>
 
-                {/* Bottom Row: Path & Action Buttons */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 border-t border-[var(--border-color)] text-xs">
-                  <div className="text-[10px] font-mono opacity-50 truncate max-w-lg" title={item.outputDir}>
+                {/* Bottom: Path & Action Buttons */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1.5 text-xs">
+                  <div className="text-[10px] font-mono text-[var(--text-muted-custom)] truncate max-w-md" title={item.outputDir}>
                     📁 {item.outputDir || 'Default Output Directory'}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-                    <span className="text-[10px] font-mono opacity-40 mr-1">
+                    <span className="text-[10px] font-mono text-[var(--text-muted-custom)]">
                       {item.finishedDate || ''} {item.timestamp || ''}
                     </span>
 
@@ -247,8 +244,8 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                         size="sm"
                         onClick={() => onOpenFolder(item.outputDir)}
                         icon={Folder}
-                        className="!h-7 !px-2.5 !text-[11px]"
-                        title="Open Output Directory in Explorer"
+                        className="!h-6.5 !px-2 !text-[11px]"
+                        title="Open in File Explorer"
                       >
                         Open
                       </Button>
@@ -260,10 +257,10 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                         size="sm"
                         onClick={() => handleCopyPath(item.outputDir, itemKey)}
                         icon={Copy}
-                        className="!h-7 !px-2.5 !text-[11px]"
-                        title="Copy Directory Path"
+                        className="!h-6.5 !px-2 !text-[11px]"
+                        title="Copy Path"
                       >
-                        {copiedId === itemKey ? 'Copied!' : 'Copy'}
+                        {copiedId === itemKey ? 'Copied' : 'Copy'}
                       </Button>
                     )}
 
@@ -272,7 +269,7 @@ export default function HistoryView({ historyList, onClearHistory, onOpenFolder 
                       size="sm"
                       onClick={() => handleDeleteItem(itemKey)}
                       icon={TrashTwo}
-                      className="!h-7 !w-7 !px-0"
+                      className="!h-6.5 !w-6.5 !px-0"
                       title="Delete Entry"
                     />
                   </div>

@@ -16,7 +16,7 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
     const results = [];
 
     for (const t of threadCounts) {
-      setActiveStep(`Testing ${t} Worker Goroutines live from Go backend...`);
+      setActiveStep(`Benchmarking ${t} worker goroutines...`);
       try {
         const res = await fetch(`/api/benchmark?workers=${t}`);
         const data = await res.json();
@@ -27,7 +27,7 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
             speed: d.speed,
             bandwidth: d.bandwidth,
             latency: d.latency,
-            efficiency: t === 32 ? '100% (Peak Speed)' : `${Math.min(100, Math.round((parseFloat(d.speed) / 200) * 100))}%`,
+            efficiency: t === 32 ? '100% (Peak)' : `${Math.min(100, Math.round((parseFloat(d.speed) / 200) * 100))}%`,
           });
         }
       } catch (err) {
@@ -35,44 +35,44 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
       }
     }
 
-    setActiveStep('Finalizing benchmark metrics...');
-    await new Promise((r) => setTimeout(r, 300));
+    setActiveStep('Finalizing metrics...');
+    await new Promise((r) => setTimeout(r, 250));
     setBenchmarkData(results);
     setRunningTest(false);
     setActiveStep('');
   };
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto py-2 select-none">
+    <div className="space-y-5 max-w-5xl mx-auto select-none">
       {/* Header */}
-      <div className="flex items-center justify-between pb-5 border-b border-[var(--border-color)]">
+      <div className="flex items-center justify-between pb-4 border-b border-[var(--border-color)]">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600 dark:text-blue-400">
-            <Wrench style={{ width: 18, height: 18 }} />
+          <div className="w-10 h-10 rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex items-center justify-center shrink-0 border border-[var(--accent-border)]">
+            <Wrench className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-lg font-bold tracking-tight">Diagnostics & Benchmark Suite</h2>
-            <p className="text-xs opacity-60 mt-0.5">Test and evaluate Go multi-worker concurrency throughput (6 vs 8 vs 20 vs 32 threads).</p>
+            <h2 className="text-base font-bold tracking-tight text-[var(--text-main)]">Diagnostics & Benchmark Suite</h2>
+            <p className="text-xs text-[var(--text-sub)]">Measure Go multi-worker concurrency throughput and latency.</p>
           </div>
         </div>
       </div>
 
-      {/* Top Benchmark Control & Configuration */}
+      {/* Benchmark Control Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1: Benchmark Trigger */}
         <div className="glass-card rounded-2xl p-5 border border-[var(--border-color)] space-y-4 md:col-span-2">
-          <div className="flex items-center justify-between pb-2.5 border-b border-[var(--border-color)]">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
             <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              <h3 className="text-xs font-semibold">Worker Concurrency Benchmark Test</h3>
+              <Zap className="w-4 h-4 text-[var(--accent)]" />
+              <h3 className="text-xs font-semibold text-[var(--text-main)]">Worker Concurrency Benchmark</h3>
             </div>
             <Badge variant="blue" className="font-mono">
               6 · 8 · 20 · 32
             </Badge>
           </div>
 
-          <p className="text-xs opacity-60 leading-relaxed">
-            Measures HTTP/2 stream multiplexing, throughput (imgs/sec), bandwidth utilisation (Mbps), and socket latency across worker thread counts.
+          <p className="text-xs text-[var(--text-sub)] leading-relaxed">
+            Measures HTTP/2 multiplexing, throughput (imgs/sec), bandwidth utilization (Mbps), and socket latency across worker thread counts.
           </p>
 
           <Button
@@ -80,30 +80,31 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
             onClick={runFullBenchmark}
             loading={runningTest}
             icon={Activity}
-            className="w-full !h-10"
+            className="w-full !h-9"
           >
-            {runningTest ? (activeStep || 'Benchmarking Workers...') : 'Run Automated Concurrency Benchmark'}
+            {runningTest ? (activeStep || 'Benchmarking...') : 'Run Automated Concurrency Benchmark'}
           </Button>
         </div>
 
         {/* Card 2: Active Profile Selection */}
         <div className="glass-card rounded-2xl p-5 border border-[var(--border-color)] space-y-4">
-          <div className="flex items-center gap-2 pb-2.5 border-b border-[var(--border-color)]">
-            <ChartLine className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <h3 className="text-xs font-semibold">Active Worker Profile</h3>
+          <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-color)]">
+            <ChartLine className="w-4 h-4 text-[var(--accent)]" />
+            <h3 className="text-xs font-semibold text-[var(--text-main)]">Active Worker Profile</h3>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-semibold uppercase tracking-widest opacity-60">Worker Count</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted-custom)]">Worker Count</label>
             <div className="grid grid-cols-2 gap-2">
               {[6, 8, 20, 32].map((w) => (
                 <button
                   key={w}
+                  type="button"
                   onClick={() => setSelectedWorkers(w)}
-                  className={`py-2 px-3 rounded-xl text-xs font-semibold border transition-all active:scale-[0.98] ${
+                  className={`py-1.5 px-3 rounded-lg text-xs font-medium border transition-all ${
                     selectedWorkers === w
-                      ? 'bg-blue-600 border-blue-500 text-white shadow-sm'
-                      : 'bg-black/5 dark:bg-white/5 border-[var(--border-color)] opacity-70 hover:opacity-100'
+                      ? 'bg-[var(--accent)] border-[var(--accent)] text-white shadow-sm font-semibold'
+                      : 'bg-[var(--btn-secondary-bg)] border-[var(--border-color)] text-[var(--text-sub)] hover:text-[var(--text-main)]'
                   }`}
                 >
                   {w} Workers
@@ -113,61 +114,60 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
           </div>
 
           <button
+            type="button"
             onClick={() => onReloadCatalog(true)}
-            className="w-full h-8 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 opacity-80 border border-[var(--border-color)] text-xs font-semibold transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
+            className="w-full h-8 rounded-lg bg-[var(--btn-secondary-bg)] hover:bg-[var(--btn-secondary-hover)] border border-[var(--border-color)] text-xs text-[var(--text-sub)] hover:text-[var(--text-main)] font-medium transition-all flex items-center justify-center gap-1.5"
           >
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" /> Purge Cache & Sync
+            <ShieldCheck className="w-3.5 h-3.5 text-[var(--accent)]" /> Purge Cache & Sync
           </button>
         </div>
       </div>
 
       {/* Benchmark Results Display */}
       {benchmarkData && (
-        <div className="glass-card rounded-2xl p-5 border border-blue-600/30 space-y-5">
-          <div className="flex items-center justify-between pb-3 border-b border-[var(--border-color)]">
+        <div className="glass-card rounded-2xl p-5 border border-[var(--accent-border)] space-y-4 animate-slide-up">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
             <div className="flex items-center gap-2">
-              <ChartColumn className="w-4.5 h-4.5 text-blue-600 dark:text-blue-400" style={{ width: 18, height: 18 }} />
-              <h3 className="text-sm font-semibold tracking-tight">Benchmark Comparison Results</h3>
+              <ChartColumn className="w-4 h-4 text-[var(--accent)]" />
+              <h3 className="text-xs font-semibold text-[var(--text-main)]">Benchmark Comparison Results</h3>
             </div>
-            <span className="text-xs text-blue-600 dark:text-blue-400 font-mono font-semibold flex items-center gap-1">
-              <CheckCircle className="w-4 h-4" /> Complete
+            <span className="text-xs text-[var(--accent)] font-mono font-medium flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5" /> Complete
             </span>
           </div>
 
-          {/* Results Table / Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {benchmarkData.map((res) => (
               <div
                 key={res.threads}
-                className={`p-4 rounded-xl border space-y-2 transition-all ${
+                className={`p-3 rounded-xl border space-y-1.5 transition-all ${
                   selectedWorkers === res.threads
-                    ? 'bg-blue-600/10 border-blue-500 text-blue-600 dark:text-blue-300 shadow-sm'
-                    : 'bg-black/[0.02] dark:bg-white/[0.02] border-[var(--border-color)]'
+                    ? 'bg-[var(--accent-soft)] border-[var(--accent)] text-[var(--text-main)] shadow-sm'
+                    : 'bg-[var(--btn-secondary-bg)] border-[var(--border-color)] text-[var(--text-main)]'
                 }`}
               >
                 <div className="flex items-center justify-between gap-1">
                   <span className="text-xs font-bold font-mono">{res.threads} Workers</span>
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-600/10 text-blue-600 dark:text-blue-400 font-mono font-semibold">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 font-mono text-[var(--text-sub)]">
                     {res.efficiency}
                   </span>
                 </div>
 
-                <div className="space-y-1">
-                  <div className="text-xl font-bold font-mono text-blue-600 dark:text-blue-400 tracking-tight">
+                <div className="space-y-0.5">
+                  <div className="text-lg font-bold font-mono text-[var(--accent)] tracking-tight">
                     {res.speed} <span className="text-[10px] opacity-60 font-sans font-normal">imgs/sec</span>
                   </div>
-                  <div className="text-[10px] opacity-60 font-mono">
-                    Bandwidth: <span className="font-bold">{res.bandwidth} Mbps</span>
+                  <div className="text-[10px] text-[var(--text-sub)] font-mono">
+                    Bandwidth: <span className="font-semibold text-[var(--text-main)]">{res.bandwidth} Mbps</span>
                   </div>
-                  <div className="text-[10px] opacity-60 font-mono">
+                  <div className="text-[10px] text-[var(--text-sub)] font-mono">
                     Latency: <span>{res.latency}</span>
                   </div>
                 </div>
 
-                {/* Relative Bar Visualizer */}
-                <div className="w-full h-1.5 bg-black/10 dark:bg-black/40 rounded-full overflow-hidden border border-black/5 dark:border-white/10">
+                <div className="w-full h-1.5 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 transition-all duration-500 rounded-full"
+                    className="h-full bg-[var(--accent)] transition-all duration-300 rounded-full"
                     style={{ width: res.efficiency.includes('%') ? res.efficiency.split('%')[0] + '%' : '100%' }}
                   ></div>
                 </div>
@@ -175,8 +175,8 @@ export default function ToolsView({ onReloadCatalog, selectedWorkers, setSelecte
             ))}
           </div>
 
-          <div className="p-3 rounded-xl bg-blue-600/10 border border-blue-600/20 text-xs text-blue-600 dark:text-blue-300 font-medium">
-            💡 <strong>Key Finding:</strong> 32 Worker Goroutines deliver peak throughput (**232.1 imgs/sec @ 208.5 Mbps**) with direct byte streaming bypass.
+          <div className="p-3 rounded-xl bg-[var(--btn-secondary-bg)] border border-[var(--border-color)] text-xs text-[var(--text-sub)] font-medium">
+            💡 <strong>Key Finding:</strong> 32 Worker Goroutines deliver peak throughput (**232.1 imgs/sec @ 208.5 Mbps**) with direct byte streaming.
           </div>
         </div>
       )}

@@ -21,6 +21,24 @@
 
 ---
 
+## 🎨 UI/UX Design & Frontend Performance Standards
+1. **Design System & Semantic Palette**:
+   - Dark Mode MUST be based on clean, deep neutral tokens (Zinc 950 `#09090b`, surface `#18181b`, border `rgba(255,255,255,0.08)`, text `#fafafa`).
+   - Light Mode MUST be based on clean, crisp neutral tokens (Slate 50 `#f8fafc`, surface `#ffffff`, border `rgba(0,0,0,0.08)`, text `#0f172a`).
+   - Use a **Single Primary Accent** (Electric Blue `#0071E3` / `#0A84FF`) for active/focused states and primary CTAs. Do NOT employ multi-colored rainbow palettes for metric cards or lists.
+2. **Anti-Clutter & Surface Elevation (No Nested Border Hell)**:
+   - Avoid nesting borders within borders. Use background tonal contrast (`surface` vs `surface-elevated`) rather than 1px borders around every inner element.
+   - Maintain consistent border radiuses across components (`rounded-lg` for inputs/buttons, `rounded-xl` for cards, `rounded-2xl` for dialogs/panels).
+3. **Zero `!important` CSS Hacks**:
+   - Theme switching (Light vs Dark) MUST use unified CSS variables or native Tailwind `dark:` classes. NEVER inject brute-force `!important` overrides in CSS files.
+4. **High-Performance & Zero-Jank Animation**:
+   - Animations MUST be subtle and GPU-friendly (150ms–200ms transitions).
+   - NEVER use continuous heavy animations (e.g. infinite pulsing loops `worker-active pulse`) on multi-item lists or worker grids.
+5. **Strict Functional Invariance**:
+   - Frontend styling refactors MUST preserve all existing props, handlers, SSE subscriptions, and Go API contracts intact.
+
+---
+
 ## 🏗️ Code Quality, Architecture & Design Standards
 1. **Enterprise-Grade Modular Architecture (Anti-Monolith)**:
    - Use the **Strategy Pattern + Provider Registry** (`engine/providers/`) for adding any new comic catalog or scraper source.

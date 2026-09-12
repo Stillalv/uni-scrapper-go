@@ -30,22 +30,21 @@ export default function AppleSelect({ value, onChange, options, className = '' }
         onClick={() => setOpen((v) => !v)}
         className={`w-full h-8 flex items-center justify-between gap-2 px-3 text-xs rounded-lg font-medium transition-all border select-none
           bg-[var(--input-bg)] border-[var(--border-color)] text-[var(--text-main)]
-          hover:border-blue-500/40
-          ${open ? 'border-blue-600 ring-[3px] ring-blue-600/20' : ''}`}
+          hover:border-[var(--border-hover)]
+          ${open ? 'border-[var(--accent)] ring-2 ring-[var(--accent-soft)]' : ''}`}
       >
         <span className="truncate text-left">{selected?.label}</span>
         <ChevronDown
-          className={`w-3.5 h-3.5 shrink-0 opacity-50 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          className={`w-3.5 h-3.5 shrink-0 text-[var(--text-sub)] transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
       {open && (
         <div
           className="absolute z-50 left-0 right-0 mt-1.5 py-1 rounded-xl overflow-hidden animate-slide-up
-            bg-white dark:bg-[#2c2c2e]
-            border border-black/10 dark:border-white/10
-            shadow-[0_8px_30px_rgba(0,0,0,0.12),0_2px_8px_rgba(0,0,0,0.08)]
-            dark:shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+            bg-[var(--panel-bg)] backdrop-blur-xl
+            border border-[var(--border-color)]
+            shadow-xl"
         >
           {options.map((opt) => {
             const isActive = opt.value === value;
@@ -60,11 +59,11 @@ export default function AppleSelect({ value, onChange, options, className = '' }
                 className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs text-left transition-colors
                   ${
                     isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-neutral-800 dark:text-white/90 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]'
+                      ? 'bg-[var(--accent)] text-white font-medium'
+                      : 'text-[var(--text-main)] hover:bg-[var(--btn-secondary-hover)]'
                   }`}
               >
-                <span className="truncate font-medium">{opt.label}</span>
+                <span className="truncate">{opt.label}</span>
                 {isActive && <Check className="w-3.5 h-3.5 shrink-0 text-white" />}
               </button>
             );
