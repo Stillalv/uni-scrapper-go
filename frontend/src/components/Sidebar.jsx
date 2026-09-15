@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, LayersTwo, ClockWaves, FineTune, Wrench, Sparkles, CheckCircle, ChevronLeft, ChevronRight, Heart } from '@mynaui/icons-react';
 import Badge from './ui/Badge';
+import AppLogo from './ui/AppLogo';
 
 export default function Sidebar({
   isOpen,
@@ -49,8 +50,8 @@ export default function Sidebar({
 
       {/* Brand Header */}
       <div className="px-4 py-3 border-b border-[var(--border-color)] flex items-center gap-2.5">
-        <div className="w-6 h-6 rounded-lg bg-[var(--accent)] flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">
-          WS
+        <div className="w-6 h-6 rounded-lg bg-[var(--accent)] flex items-center justify-center shadow-sm shrink-0">
+          <AppLogo className="w-3.5 h-3.5 text-white" />
         </div>
         <div className="min-w-0">
           <div className="text-xs font-semibold tracking-tight text-[var(--text-main)] truncate">Webtoon Scraper</div>

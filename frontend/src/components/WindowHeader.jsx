@@ -1,7 +1,8 @@
 import React from 'react';
-import { Folder, FolderTwo, LayersTwo, Sun, Moon } from '@mynaui/icons-react';
+import { Folder, FolderTwo, Sun, Moon } from '@mynaui/icons-react';
 import Button from './ui/Button';
 import Badge from './ui/Badge';
+import AppLogo from './ui/AppLogo';
 
 const callNative = (name) => {
   try {
@@ -56,7 +57,7 @@ export default function WindowHeader({
         <div className="h-3.5 w-px bg-[var(--border-color)]"></div>
 
         <div className="flex items-center gap-2">
-          <LayersTwo className="w-3.5 h-3.5 text-[var(--accent)]" />
+          <AppLogo className="w-3.5 h-3.5 text-[var(--accent)]" />
           <span className="font-semibold text-xs tracking-tight text-[var(--text-main)]">Webtoon Scraper</span>
           <span className="text-[10px] text-[var(--text-sub)] font-mono">v2.6</span>
         </div>
