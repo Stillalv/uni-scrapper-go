@@ -59,7 +59,7 @@ export default function WindowHeader({
         <div className="flex items-center gap-2">
           <AppLogo className="w-3.5 h-3.5 text-[var(--accent)]" />
           <span className="font-semibold text-xs tracking-tight text-[var(--text-main)]">Webtoon Scraper</span>
-          <span className="text-[10px] text-[var(--text-sub)] font-mono">v2.6</span>
+          <span className="text-[10px] text-[var(--text-sub)] font-mono">v2.7</span>
         </div>
       </div>
 

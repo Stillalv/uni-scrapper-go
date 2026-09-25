@@ -1,41 +1,45 @@
-# 🚀 Release Notes - Version 2.6.0
+﻿# 🚀 Release Notes - Version 2.7.0
 
-**Release Tag:** `v2.6.0`  
-**Release Title:** `v2.6.0 - Naver Webtoon Korea Integration & Multi-Catalog Scraping Engine`  
+**Release Tag:** `v2.7.0`  
+**Release Title:** `v2.7.0 - Modernized UI/UX Design System, Official Brand Logo & Global Icon Polish`  
 **Repository:** [Stillalv/uni-scrapper-go](https://github.com/Stillalv/uni-scrapper-go)  
-**Date:** August 31, 2026  
+**Date:** September 26, 2026  
 
 ---
 
-## 🌟 Highlights & Major Improvements in v2.6.0
+## 🌟 Highlights & Major Improvements in v2.7.0
 
-### 1. 🇰🇷 Naver Webtoon Korea (`naver_ko`) Provider Integration
-- Added full native scraping and catalog resolution support for **Naver Webtoon Korea (`comic.naver.com`)**.
-- Crawls and aggregates over **1,058+ Korean comic series** across 9 distinct schedules (`mon`, `tue`, `wed`, `thu`, `fri`, `sat`, `sun`, `dailyPlus`, and `finish`) with 24-hour local caching (`catalog_cache_naver_ko.json`).
-- Direct JSON-based REST metadata and chapter resolution via internal Naver APIs (`/api/article/list/info` and `/api/article/list`) with automated pagination.
-- Intelligent separation of readable free chapters (`charge: false`) and paid/preview cookie releases.
+### 1. 🎨 Modernized UI/UX Design System & Zero CSS Hacks
+- **Semantic Neutral Palette**: Transitioned from multi-color visual noise to a clean Apple/macOS-inspired neutral aesthetic.
+  - Dark Mode: Deep neutral Zinc 950 (`#09090b`), surface elevated (`#18181b`), subtle borders (`rgba(255,255,255,0.08)`), and crisp text (`#fafafa`).
+  - Light Mode: Crisp Slate 50 (`#f8fafc`), clean surface (`#ffffff`), and slate typography (`#0f172a`).
+- **Single Accent Color**: Unified all interactive states, focused rings, and primary actions under Electric Blue (`#0071E3` / `#0A84FF`).
+- **Elimination of Nested Borders**: Replaced repetitive 1px border wrapping with surface elevation and background tonal contrast.
+- **Zero `!important` Overrides**: Cleaned up CSS architecture into standard CSS variables and Tailwind utilities for seamless theme switching.
 
-### 2. 🧩 Enterprise Strategy Pattern & Provider Registry Expansion
-- Encapsulated Naver Webtoon in a decoupled package (`engine/providers/naver/`) adhering strictly to the `providers.Provider` interface.
-- Automatic polymorphic URL/ID dispatching via `providers.FindMatchingProvider` supporting `comic.naver.com`, `m.comic.naver.com`, and numeric Title IDs without hardcoded routing.
+### 2. 💎 Official Brand Logo & Favicon Integration
+- **Isometric Ribbon Logo**: Converted and centered the official 3D ribbon "S" brand logo into high-resolution assets (`app-logo.png`, `app-logo-white.png`, `app-logo-accent.png`).
+- **Native Vector Component**: Built [`AppLogo.jsx`](file:///c:/Users/uni/Documents/universe/uni-scrapper-go/frontend/src/components/ui/AppLogo.jsx) using pure scalable vector paths (`fill="currentColor"`), ensuring razor-sharp rendering on Retina and 4K displays.
+- **Brand Placements**: Integrated the official logo badge into the Sidebar header and Window Titlebar.
+- **Full Favicon Suite**: Generated `/favicon.svg`, `/favicon.png`, and multi-resolution `/favicon.ico` (16px to 128px) for desktop and browser windows.
 
-### 3. ⚡ Anti-Stall HTTP Transport & Concurrency Optimizations
-- Optimized `FastHTTPClient` connection pools and bounded pagination semaphores to eliminate HTTP/2 multiplexing stalls on high-latency international CDNs.
-- Full high-definition panel image streaming from Naver CDN (`image-comic.pstatic.net`) with automated `Referer` bypass headers in `engine/downloader/pool.go` and `/api/proxy-image`.
+### 3. 🔍 Confident Iconography & Layout Enhancements
+- **Global Icon Stroke Weight**: Boosted default icon stroke weight from 1.5px to a confident, readable 1.85px across all views.
+- **History View Action Layout**: Fixed compressed/squished trash and action button layout in download history cards, ensuring proper flex proportions and hover states.
 
-### 4. 🎨 Desktop React UI & Telegram Remote Bot Updates
-- **Desktop UI**: Added `🇰🇷 Naver (KO)` catalog tab with Korean flag badge (`fi fi-kr`), active source switching, and bookmark filtering.
-- **Telegram Bot**: Added `🇰🇷 Naver (KO)` source selection button to the interactive inline keyboard catalog browser (`src_naver_ko`).
+### 4. ⚡ High-Performance Desktop Build
+- **GPU-Friendly Transitions**: Standardized subtle 150ms–200ms easing across all cards, drawers, and buttons, removing CPU-intensive pulsing loops.
+- **Native Windows Desktop Binary**: Packaged and embedded frontend dist into a standalone Windows executable (`webtoon-scraper.exe`) compiled with `-ldflags="-H windowsgui -s -w"` for instant, silent startup without console windows.
 
 ---
 
 ## 🧪 Verification & Test Results
-- **Go Unit Test Suite**: All unit tests passed cleanly (`go test ./server ./engine/...`).
-- **Live 4-Catalog Download Matrix**: 100% download success verified on all 4 providers (Webtoon ID, Webtoon EN, Naver KO, MangaPlus ID).
-- **Frontend Build**: Vite 5.4 production bundle built in 4.8s.
-- **Native Windows GUI Executable**: Compiled with `-ldflags="-H windowsgui -s -w"` for borderless native desktop execution without console windows.
+- **Go Unit Test Suite**: 100% tests passed (`go test ./server ./engine/...`).
+- **Frontend Production Build**: Built cleanly with Vite 5.4 (`npm run build`).
+- **Multi-Catalog Provider Compatibility**: Full backward compatibility preserved for LINE Webtoon (ID/EN), Naver Webtoon (KO), and MANGA Plus (ID).
+- **Windows Executable**: Validated standalone launch and GUI interaction.
 
 ---
 
 ## 📦 Assets
-- `webtoon-scraper.exe`: Native Windows Desktop Executable (GUI, standalone executable).
+- `webtoon-scraper.exe`: Native Windows Desktop Executable (GUI standalone).
